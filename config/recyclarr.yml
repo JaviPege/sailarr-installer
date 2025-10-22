@@ -177,17 +177,21 @@ radarr:
           - name: Recyclarr-2160p
 
       - trash_ids:
-          # HDR Formats
-          - e23edd2482476e595fb990b12e7c609c # DV HDR10
-          - 58d6a88f13e2db7f5059c41047876f00 # DV
-          - 55d53828b9d81cbe20b02efd00aa0efd # DV HLG
-          - a3e19f8f627608af0211acd02bf89735 # DV SDR
-          - dfb86d5941bc9075d6af23b09c2aeecd # HDR10
-          - e61e28db95d22bedcadf030b8f156d96 # HDR
-          - 2a4d9069cc1fe3242ff9bdaebed239bb # HDR (undefined)
-          - 08d6d8834ad9ec87b1dc7ec8148e7a1f # PQ
-          - 9364dd386c9b4a1100dde8264690add7 # HLG
-          - 9c38ebb7384dada637be8899efa68e6f # SDR
+          # HDR Formats (Updated to match current TRaSH Guides)
+          - 7878c33f1963fefb3d6c8657d46c2f0a # DV HDR10
+          - 6d0d8de7b57e35518ac0308b0ddf404e # DV
+          - 1f733af03141f068a540eec352589a89 # DV HLG
+          - 27954b0a80aab882522a88a4d9eae1cd # DV SDR
+          - 3497799d29a085e2ac2df9d468413c94 # HDR10
+          - 3e2c4e748b64a1a1118e0ea3f4cf6875 # HDR
+          - bb019e1cd00f304f80971c965de064dc # HDR (undefined)
+          - 2a7e3be05d3861d6df7171ec74cad727 # PQ
+          - 17e889ce13117940092308f48b48b45b # HLG
+          - 2016d1676f5ee13a5b7257ff86ac9a93 # SDR
+
+          # UHD Streaming
+          - 43b3cf48cb385cd3eac608ee6bca7f09 # UHD Streaming Boost
+          - d2d299244a92b8a52d4921ce3897a256 # UHD Streaming Cut
         assign_scores_to:
           - name: Recyclarr-2160p
 
