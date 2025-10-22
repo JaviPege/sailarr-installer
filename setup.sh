@@ -280,6 +280,25 @@ download_file() {
     fi
 }
 
+# Create file from content with permissions (atomic, reusable)
+# Usage: create_file_from_content "destination" "content" "owner:group" "permissions"
+create_file_from_content() {
+    local destination="$1"
+    local content="$2"
+    local owner="${3:-}"
+    local permissions="${4:-}"
+
+    echo "$content" | sudo tee "$destination" > /dev/null
+
+    if [ -n "$owner" ]; then
+        sudo chown "$owner" "$destination"
+    fi
+
+    if [ -n "$permissions" ]; then
+        sudo chmod "$permissions" "$destination"
+    fi
+}
+
 # Show installation summary
 show_installation_summary() {
     echo ""
@@ -710,16 +729,16 @@ echo "✓ Custom indexer definitions configured"
 # Configure Zurg with Real-Debrid token
 echo ""
 echo "Configuring Zurg with Real-Debrid token..."
-sudo mkdir -p ${ROOT_DIR}/config/zurg-config
-cat <<EOF | sudo tee ${ROOT_DIR}/config/zurg-config/config.yml > /dev/null
-# Zurg configuration version
+create_folder "${ROOT_DIR}/config/zurg-config" "rclone:mediacenter" "755"
+
+ZURG_CONFIG="# Zurg configuration version
 zurg: v1
 
 # Provide your Real-Debrid API token
 token: ${REALDEBRID_TOKEN} # https://real-debrid.com/apitoken
 
 # Host and port settings
-host: "[::]"
+host: \"[::]\"
 port: 9999
 
 # Checking for changes in Real-Debrid API more frequently (every 60 seconds)
@@ -745,28 +764,29 @@ directories:
   torrents:
     group: 1
     filters:
-      - regex: /.*/
-EOF
-sudo chown rclone:mediacenter ${ROOT_DIR}/config/zurg-config/config.yml
+      - regex: /.*/"
+
+create_file_from_content "${ROOT_DIR}/config/zurg-config/config.yml" "$ZURG_CONFIG" "rclone:mediacenter"
 echo "✓ Zurg configured with Real-Debrid token"
 
 # Configure Decypharr with Real-Debrid token
 echo ""
 echo "Configuring Decypharr with Real-Debrid token..."
-sudo mkdir -p ${ROOT_DIR}/config/decypharr-config/{cache,logs,rclone}
+create_folder "${ROOT_DIR}/config/decypharr-config/cache" "decypharr:mediacenter" "755"
+create_folder "${ROOT_DIR}/config/decypharr-config/logs" "decypharr:mediacenter" "755"
+create_folder "${ROOT_DIR}/config/decypharr-config/rclone" "decypharr:mediacenter" "755"
 
 # Create initial config.json
-cat <<EOF | sudo tee ${ROOT_DIR}/config/decypharr-config/config.json > /dev/null
-{
+DECYPHARR_CONFIG='{
   "url_base": "/",
   "port": "8282",
   "log_level": "info",
   "debrids": [
     {
       "name": "realdebrid",
-      "api_key": "${REALDEBRID_TOKEN}",
+      "api_key": "'${REALDEBRID_TOKEN}'",
       "download_api_keys": [
-        "${REALDEBRID_TOKEN}"
+        "'${REALDEBRID_TOKEN}'"
       ],
       "folder": "/data/realdebrid-zurg/torrents",
       "download_uncached": true,
@@ -800,8 +820,8 @@ cat <<EOF | sudo tee ${ROOT_DIR}/config/decypharr-config/config.json > /dev/null
     "vfs_read_ahead": "128k",
     "async_read": false,
     "transfers": 4,
-    "uid": ${DECYPHARR_UID},
-    "gid": ${MEDIACENTER_GID},
+    "uid": '${DECYPHARR_UID}',
+    "gid": '${MEDIACENTER_GID}',
     "attr_timeout": "1s",
     "dir_cache_time": "5m",
     "log_level": "INFO"
@@ -816,17 +836,13 @@ cat <<EOF | sudo tee ${ROOT_DIR}/config/decypharr-config/config.json > /dev/null
     "wpl", "wtv", "wv", "xvid"
   ],
   "use_auth": false
-}
-EOF
+}'
 
-# Create empty auth.json (will be populated on first run)
-echo '{}' | sudo tee ${ROOT_DIR}/config/decypharr-config/auth.json > /dev/null
+create_file_from_content "${ROOT_DIR}/config/decypharr-config/config.json" "$DECYPHARR_CONFIG" "decypharr:mediacenter"
 
-# Create empty torrents.json
-echo '{}' | sudo tee ${ROOT_DIR}/config/decypharr-config/torrents.json > /dev/null
-
-# Set permissions
-sudo chown -R decypharr:mediacenter ${ROOT_DIR}/config/decypharr-config
+# Create empty auth.json and torrents.json
+create_file_from_content "${ROOT_DIR}/config/decypharr-config/auth.json" "{}" "decypharr:mediacenter"
+create_file_from_content "${ROOT_DIR}/config/decypharr-config/torrents.json" "{}" "decypharr:mediacenter"
 sudo chmod 644 ${ROOT_DIR}/config/decypharr-config/*.json
 echo "✓ Decypharr configured with Real-Debrid token"
 
