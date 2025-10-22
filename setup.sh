@@ -493,16 +493,17 @@ configure_arr_authentication() {
 }
 
 # Get Prowlarr application ID by name (atomic, call N times)
-# Usage: get_prowlarr_app_id "api_key" "app_name" "output_var"
+# Usage: get_prowlarr_app_id "port" "api_key" "app_name" "output_var"
 # Returns: 0 if found, 1 if not found
 get_prowlarr_app_id() {
-    local api_key="$1"
-    local app_name="$2"
-    local output_var="$3"
+    local port="$1"
+    local api_key="$2"
+    local app_name="$3"
+    local output_var="$4"
     local apps_json
     local app_id
 
-    if ! api_get_request "http://localhost:9696/api/v1/applications" "$api_key" apps_json; then
+    if ! api_get_request "http://localhost:$port/api/v1/applications" "$api_key" apps_json; then
         return 1
     fi
 
@@ -517,16 +518,17 @@ get_prowlarr_app_id() {
 }
 
 # Trigger Prowlarr indexer sync to ONE application (atomic, call N times)
-# Usage: trigger_prowlarr_sync "api_key" "app_id"
+# Usage: trigger_prowlarr_sync "port" "api_key" "app_id"
 # Returns: 0 if success, 1 if failed
 trigger_prowlarr_sync() {
-    local api_key="$1"
-    local app_id="$2"
+    local port="$1"
+    local api_key="$2"
+    local app_id="$3"
     local json_payload
 
     json_payload="{\"name\": \"ApplicationIndexerSync\", \"applicationIds\": [$app_id]}"
 
-    if api_post_request "http://localhost:9696/api/v1/command" "$api_key" "$json_payload"; then
+    if api_post_request "http://localhost:$port/api/v1/command" "$api_key" "$json_payload"; then
         return 0
     else
         return 1
@@ -1497,15 +1499,15 @@ if [[ $autoconfig_choice =~ ^[Yy]$ ]]; then
         echo "Triggering indexer sync to Radarr and Sonarr..."
 
         # Get Radarr app ID and trigger sync
-        if get_prowlarr_app_id "$PROWLARR_API_KEY" "Radarr" RADARR_APP_ID; then
-            if trigger_prowlarr_sync "$PROWLARR_API_KEY" "$RADARR_APP_ID"; then
+        if get_prowlarr_app_id 9696 "$PROWLARR_API_KEY" "Radarr" RADARR_APP_ID; then
+            if trigger_prowlarr_sync 9696 "$PROWLARR_API_KEY" "$RADARR_APP_ID"; then
                 echo "  ✓ Triggered sync to Radarr"
             fi
         fi
 
         # Get Sonarr app ID and trigger sync
-        if get_prowlarr_app_id "$PROWLARR_API_KEY" "Sonarr" SONARR_APP_ID; then
-            if trigger_prowlarr_sync "$PROWLARR_API_KEY" "$SONARR_APP_ID"; then
+        if get_prowlarr_app_id 9696 "$PROWLARR_API_KEY" "Sonarr" SONARR_APP_ID; then
+            if trigger_prowlarr_sync 9696 "$PROWLARR_API_KEY" "$SONARR_APP_ID"; then
                 echo "  ✓ Triggered sync to Sonarr"
             fi
         fi
