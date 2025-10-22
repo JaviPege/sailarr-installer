@@ -222,6 +222,64 @@ create_folder() {
     sudo chmod "$permissions" "$folder_path"
 }
 
+# Set permissions on path (atomic, reusable)
+# Usage: set_permissions "/path" "permissions" "owner:group"
+set_permissions() {
+    local path="$1"
+    local permissions="$2"
+    local owner="$3"
+
+    if [ -n "$permissions" ]; then
+        sudo chmod -R "$permissions" "$path"
+    fi
+
+    if [ -n "$owner" ]; then
+        sudo chown -R "$owner" "$path"
+    fi
+}
+
+# Copy file with permissions (atomic, reusable)
+# Usage: copy_file "source" "destination" "owner:group" "permissions"
+copy_file() {
+    local source="$1"
+    local destination="$2"
+    local owner="${3:-}"
+    local permissions="${4:-}"
+
+    sudo cp "$source" "$destination"
+
+    if [ -n "$owner" ]; then
+        sudo chown "$owner" "$destination"
+    fi
+
+    if [ -n "$permissions" ]; then
+        sudo chmod "$permissions" "$destination"
+    fi
+}
+
+# Download file from URL with permissions (atomic, reusable)
+# Usage: download_file "url" "destination" "owner:group" "permissions"
+download_file() {
+    local url="$1"
+    local destination="$2"
+    local owner="${3:-}"
+    local permissions="${4:-}"
+
+    local temp_file="/tmp/download-$$-$(basename "$destination")"
+
+    curl -sL "$url" -o "$temp_file"
+    sudo cp "$temp_file" "$destination"
+    rm -f "$temp_file"
+
+    if [ -n "$owner" ]; then
+        sudo chown "$owner" "$destination"
+    fi
+
+    if [ -n "$permissions" ]; then
+        sudo chmod "$permissions" "$destination"
+    fi
+}
+
 # Show installation summary
 show_installation_summary() {
     echo ""
@@ -569,20 +627,19 @@ echo "✓ Directory structure created"
 # Set permissions
 echo ""
 echo "Setting permissions..."
-sudo chmod -R a=,a+rX,u+w,g+w ${ROOT_DIR}/data/
-sudo chmod -R a=,a+rX,u+w,g+w ${ROOT_DIR}/config/
 
-sudo chown -R $INSTALL_UID:mediacenter ${ROOT_DIR}/data/
-sudo chown -R $INSTALL_UID:mediacenter ${ROOT_DIR}/config/
-sudo chown -R sonarr:mediacenter ${ROOT_DIR}/config/sonarr-config
-sudo chown -R radarr:mediacenter ${ROOT_DIR}/config/radarr-config
-sudo chown -R recyclarr:mediacenter ${ROOT_DIR}/config/recyclarr-config
-sudo chown -R prowlarr:mediacenter ${ROOT_DIR}/config/prowlarr-config
-sudo chown -R overseerr:mediacenter ${ROOT_DIR}/config/overseerr-config
-sudo chown -R plex:mediacenter ${ROOT_DIR}/config/plex-config
-sudo chown -R decypharr:mediacenter ${ROOT_DIR}/config/decypharr-config
-sudo chown -R autoscan:mediacenter ${ROOT_DIR}/config/autoscan-config
-sudo chown -R pinchflat:mediacenter ${ROOT_DIR}/config/pinchflat-config
+set_permissions "${ROOT_DIR}/data/" "a=,a+rX,u+w,g+w" "$INSTALL_UID:mediacenter"
+set_permissions "${ROOT_DIR}/config/" "a=,a+rX,u+w,g+w" "$INSTALL_UID:mediacenter"
+set_permissions "${ROOT_DIR}/config/sonarr-config" "" "sonarr:mediacenter"
+set_permissions "${ROOT_DIR}/config/radarr-config" "" "radarr:mediacenter"
+set_permissions "${ROOT_DIR}/config/recyclarr-config" "" "recyclarr:mediacenter"
+set_permissions "${ROOT_DIR}/config/prowlarr-config" "" "prowlarr:mediacenter"
+set_permissions "${ROOT_DIR}/config/overseerr-config" "" "overseerr:mediacenter"
+set_permissions "${ROOT_DIR}/config/plex-config" "" "plex:mediacenter"
+set_permissions "${ROOT_DIR}/config/decypharr-config" "" "decypharr:mediacenter"
+set_permissions "${ROOT_DIR}/config/autoscan-config" "" "autoscan:mediacenter"
+set_permissions "${ROOT_DIR}/config/pinchflat-config" "" "pinchflat:mediacenter"
+
 echo "✓ Permissions set"
 
 # Copy docker directory to installation location if different
@@ -596,10 +653,8 @@ if [ "$ROOT_DIR" != "$SCRIPT_DIR" ]; then
 
     # Copy recyclarr configuration
     log_operation "COPY" "recyclarr.yml and recyclarr-sync.sh to ${ROOT_DIR}/"
-    sudo cp "$SCRIPT_DIR/config/recyclarr.yml" "${ROOT_DIR}/"
-    sudo cp "$SCRIPT_DIR/scripts/recyclarr-sync.sh" "${ROOT_DIR}/"
-    sudo chown $INSTALL_UID:mediacenter "${ROOT_DIR}/recyclarr.yml" "${ROOT_DIR}/recyclarr-sync.sh"
-    sudo chmod +x "${ROOT_DIR}/recyclarr-sync.sh"
+    copy_file "$SCRIPT_DIR/config/recyclarr.yml" "${ROOT_DIR}/recyclarr.yml" "$INSTALL_UID:mediacenter"
+    copy_file "$SCRIPT_DIR/scripts/recyclarr-sync.sh" "${ROOT_DIR}/recyclarr-sync.sh" "$INSTALL_UID:mediacenter" "+x"
     echo "✓ Recyclarr configuration copied to ${ROOT_DIR}/"
 fi
 
@@ -619,8 +674,7 @@ if [ -d "${ROOT_DIR}/rclone.conf" ]; then
     sudo rm -rf "${ROOT_DIR}/rclone.conf"
 fi
 
-sudo cp "$SCRIPT_DIR/config/rclone.conf" "${ROOT_DIR}/"
-sudo chown rclone:mediacenter "${ROOT_DIR}/rclone.conf"
+copy_file "$SCRIPT_DIR/config/rclone.conf" "${ROOT_DIR}/rclone.conf" "rclone:mediacenter"
 
 # Verify it was copied as a file
 if [ ! -f "${ROOT_DIR}/rclone.conf" ]; then
@@ -634,21 +688,21 @@ log_success "rclone.conf copied successfully to ${ROOT_DIR}/"
 echo ""
 echo "Downloading custom indexer definitions..."
 log_operation "MKDIR" "${ROOT_DIR}/config/prowlarr-config/Definitions/Custom"
-sudo mkdir -p ${ROOT_DIR}/config/prowlarr-config/Definitions/Custom
+create_folder "${ROOT_DIR}/config/prowlarr-config/Definitions/Custom" "prowlarr:mediacenter" "755"
 
 # Download Torrentio from official repository
 log_operation "DOWNLOAD" "Torrentio indexer definition from GitHub"
-curl -sL https://github.com/dreulavelle/Prowlarr-Indexers/raw/main/Custom/torrentio.yml -o /tmp/torrentio.yml
-sudo cp /tmp/torrentio.yml ${ROOT_DIR}/config/prowlarr-config/Definitions/Custom/
-sudo chown prowlarr:mediacenter ${ROOT_DIR}/config/prowlarr-config/Definitions/Custom/torrentio.yml
-sudo rm /tmp/torrentio.yml
+download_file \
+    "https://github.com/dreulavelle/Prowlarr-Indexers/raw/main/Custom/torrentio.yml" \
+    "${ROOT_DIR}/config/prowlarr-config/Definitions/Custom/torrentio.yml" \
+    "prowlarr:mediacenter"
 echo "  ✓ Torrentio indexer definition downloaded"
 
 # Download Zilean from official repository
-curl -sL https://github.com/dreulavelle/Prowlarr-Indexers/raw/main/Custom/zilean.yml -o /tmp/zilean.yml
-sudo cp /tmp/zilean.yml ${ROOT_DIR}/config/prowlarr-config/Definitions/Custom/
-sudo chown prowlarr:mediacenter ${ROOT_DIR}/config/prowlarr-config/Definitions/Custom/zilean.yml
-sudo rm /tmp/zilean.yml
+download_file \
+    "https://github.com/dreulavelle/Prowlarr-Indexers/raw/main/Custom/zilean.yml" \
+    "${ROOT_DIR}/config/prowlarr-config/Definitions/Custom/zilean.yml" \
+    "prowlarr:mediacenter"
 echo "  ✓ Zilean indexer definition downloaded"
 
 echo "✓ Custom indexer definitions configured"
