@@ -871,12 +871,19 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 
     if [ -z "$RADARR_API_KEY" ] || [ -z "$SONARR_API_KEY" ] || [ -z "$PROWLARR_API_KEY" ]; then
         log_error "Failed to retrieve API keys. Services may not be fully initialized."
-        echo "You can configure services manually or run this script again later."
-    else
-        log_success "API keys retrieved"
-        echo "  - Radarr:   $RADARR_API_KEY"
-        echo "  - Sonarr:   $SONARR_API_KEY"
-        echo "  - Prowlarr: $PROWLARR_API_KEY"
+        log_error "Missing API keys:"
+        [ -z "$RADARR_API_KEY" ] && log_error "  - Radarr API key is empty"
+        [ -z "$SONARR_API_KEY" ] && log_error "  - Sonarr API key is empty"
+        [ -z "$PROWLARR_API_KEY" ] && log_error "  - Prowlarr API key is empty"
+        log_error "Check service logs: docker logs radarr | docker logs sonarr | docker logs prowlarr"
+        log_error "Installation aborted - cannot continue without API keys"
+        exit 1
+    fi
+
+    log_success "API keys retrieved"
+    echo "  - Radarr:   $RADARR_API_KEY"
+    echo "  - Sonarr:   $SONARR_API_KEY"
+    echo "  - Prowlarr: $PROWLARR_API_KEY"
 
         # Configure Radarr
         RADARR_API_KEY=$(configure_arr_service "radarr" 7878 "movies" "decypharr" 8282 "$RADARR_API_KEY" | tail -1)
@@ -1008,8 +1015,15 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
         echo "  ✓ Indexer added: YTS"
 
         # Add Radarr and Sonarr as applications in Prowlarr
-        add_arr_to_prowlarr "radarr" 7878 "$RADARR_API_KEY" 9696 "$PROWLARR_API_KEY"
-        add_arr_to_prowlarr "sonarr" 8989 "$SONARR_API_KEY" 9696 "$PROWLARR_API_KEY"
+        if ! add_arr_to_prowlarr "radarr" 7878 "$RADARR_API_KEY" 9696 "$PROWLARR_API_KEY"; then
+            log_error "Installation aborted - failed to add Radarr to Prowlarr"
+            exit 1
+        fi
+
+        if ! add_arr_to_prowlarr "sonarr" 8989 "$SONARR_API_KEY" 9696 "$PROWLARR_API_KEY"; then
+            log_error "Installation aborted - failed to add Sonarr to Prowlarr"
+            exit 1
+        fi
 
         # Trigger indexer sync to all applications
         echo ""

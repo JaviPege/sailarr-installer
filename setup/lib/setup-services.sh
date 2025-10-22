@@ -22,19 +22,30 @@ configure_arr_service() {
     local api_key=$(extract_api_key "$service_name")
     if [ -z "$api_key" ]; then
         log_error "Failed to get API key for $service_name"
-        return 1
+        log_error "Installation aborted - cannot continue without API key"
+        exit 1
     fi
 
     # Add root folder
-    add_root_folder "$service_name" "$service_port" "$api_key" "/data/media/$media_type" "Media"
+    if ! add_root_folder "$service_name" "$service_port" "$api_key" "/data/media/$media_type" "Media"; then
+        log_error "Failed to add root folder to $service_name"
+        log_error "Installation aborted - critical configuration failed"
+        exit 1
+    fi
 
     # Add download client
-    add_download_client "$service_name" "$service_port" "$api_key" \
-        "Decypharr" "$download_client" "$download_port" "$api_key" "$media_type"
+    if ! add_download_client "$service_name" "$service_port" "$api_key" \
+        "Decypharr" "$download_client" "$download_port" "$api_key" "$media_type"; then
+        log_error "Failed to add download client to $service_name"
+        log_error "Installation aborted - critical configuration failed"
+        exit 1
+    fi
 
-    # Add remote path mapping
-    add_remote_path_mapping "$service_name" "$service_port" "$api_key" \
-        "/data/media/$service_name" "/data/media/$media_type" "$download_client"
+    # Add remote path mapping (non-critical, just log warning)
+    if ! add_remote_path_mapping "$service_name" "$service_port" "$api_key" \
+        "/data/media/$service_name" "/data/media/$media_type" "$download_client"; then
+        log_warning "Failed to add remote path mapping to $service_name (non-critical)"
+    fi
 
     log_success "$service_name configuration completed"
 
