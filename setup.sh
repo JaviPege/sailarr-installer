@@ -1287,7 +1287,7 @@ if [[ $autoconfig_choice =~ ^[Yy]$ ]]; then
     # Check for unhealthy containers using atomic function
     UNHEALTHY_SERVICES=()
     for service in "${EXPECTED_SERVICES[@]}"; do
-        local status
+        status=""
         get_docker_health_status "$service" status
         if [ "$status" = "unhealthy" ]; then
             UNHEALTHY_SERVICES+=("$service")
