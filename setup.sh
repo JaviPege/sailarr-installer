@@ -448,32 +448,6 @@ if [ "$ROOT_DIR" != "$SCRIPT_DIR" ]; then
     sudo chown -R $INSTALL_UID:mediacenter "${ROOT_DIR}/docker"
     echo "✓ Docker configuration copied to ${ROOT_DIR}/docker"
 
-    # Copy rclone.conf
-    log_operation "COPY" "rclone.conf to ${ROOT_DIR}/"
-
-    # Verify source is a file
-    if [ ! -f "$SCRIPT_DIR/config/rclone.conf" ]; then
-        log_error "Source rclone.conf is not a file: $SCRIPT_DIR/config/rclone.conf"
-        exit 1
-    fi
-
-    # Remove destination if it's a directory
-    if [ -d "${ROOT_DIR}/rclone.conf" ]; then
-        log_warning "Destination rclone.conf is a directory, removing it"
-        sudo rm -rf "${ROOT_DIR}/rclone.conf"
-    fi
-
-    sudo cp "$SCRIPT_DIR/config/rclone.conf" "${ROOT_DIR}/"
-    sudo chown rclone:mediacenter "${ROOT_DIR}/rclone.conf"
-
-    # Verify it was copied as a file
-    if [ ! -f "${ROOT_DIR}/rclone.conf" ]; then
-        log_error "Failed to copy rclone.conf as a file to ${ROOT_DIR}/"
-        exit 1
-    fi
-
-    log_success "rclone.conf copied successfully"
-
     # Copy recyclarr configuration
     log_operation "COPY" "recyclarr.yml and recyclarr-sync.sh to ${ROOT_DIR}/"
     sudo cp "$SCRIPT_DIR/config/recyclarr.yml" "${ROOT_DIR}/"
@@ -482,6 +456,33 @@ if [ "$ROOT_DIR" != "$SCRIPT_DIR" ]; then
     sudo chmod +x "${ROOT_DIR}/recyclarr-sync.sh"
     echo "✓ Recyclarr configuration copied to ${ROOT_DIR}/"
 fi
+
+# Copy rclone.conf (ALWAYS needed, even if ROOT_DIR == SCRIPT_DIR)
+echo ""
+log_operation "COPY" "rclone.conf to ${ROOT_DIR}/"
+
+# Verify source is a file
+if [ ! -f "$SCRIPT_DIR/config/rclone.conf" ]; then
+    log_error "Source rclone.conf is not a file: $SCRIPT_DIR/config/rclone.conf"
+    exit 1
+fi
+
+# Remove destination if it's a directory
+if [ -d "${ROOT_DIR}/rclone.conf" ]; then
+    log_warning "Destination rclone.conf is a directory, removing it"
+    sudo rm -rf "${ROOT_DIR}/rclone.conf"
+fi
+
+sudo cp "$SCRIPT_DIR/config/rclone.conf" "${ROOT_DIR}/"
+sudo chown rclone:mediacenter "${ROOT_DIR}/rclone.conf"
+
+# Verify it was copied as a file
+if [ ! -f "${ROOT_DIR}/rclone.conf" ]; then
+    log_error "Failed to copy rclone.conf as a file to ${ROOT_DIR}/"
+    exit 1
+fi
+
+log_success "rclone.conf copied successfully to ${ROOT_DIR}/"
 
 # Download custom indexer definitions for Prowlarr
 echo ""
