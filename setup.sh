@@ -1375,7 +1375,7 @@ if [[ $autoconfig_choice =~ ^[Yy]$ ]]; then
     echo "  - Prowlarr: $PROWLARR_API_KEY"
 
         # Configure Radarr
-        RADARR_API_KEY=$(configure_arr_service "radarr" "$RADARR_PORT" "movies" "decypharr" "$DECYPHARR_PORT" "$RADARR_API_KEY" | tail -1)
+        RADARR_API_KEY=$(configure_arr_service "radarr" "$RADARR_PORT" "movies" "decypharr" "$DECYPHARR_CONTAINER_PORT" "$RADARR_API_KEY" | tail -1)
 
         # Configure Radarr authentication if enabled using atomic function
         if [ "$AUTH_ENABLED" = true ]; then
@@ -1386,7 +1386,7 @@ if [[ $autoconfig_choice =~ ^[Yy]$ ]]; then
         fi
 
         # Configure Sonarr
-        SONARR_API_KEY=$(configure_arr_service "sonarr" "$SONARR_PORT" "tv" "decypharr" "$DECYPHARR_PORT" "$SONARR_API_KEY" | tail -1)
+        SONARR_API_KEY=$(configure_arr_service "sonarr" "$SONARR_PORT" "tv" "decypharr" "$DECYPHARR_CONTAINER_PORT" "$SONARR_API_KEY" | tail -1)
 
         # Configure Sonarr authentication if enabled using atomic function
         if [ "$AUTH_ENABLED" = true ]; then
