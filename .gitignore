@@ -1,9 +1,12 @@
 # MediaCenter - Git Ignore File
 
-# Production directories with sensitive data
-config/
+# Production directories with sensitive data (runtime, created by setup.sh)
 data/
 logs/
+
+# Docker runtime environment files
+docker/.env.local
+docker/.env.install
 
 # Installation artifacts
 .env.install

@@ -274,6 +274,7 @@ After answering all questions, the installer will:
 - Waits for services to generate API keys
 - Automatically extracts keys from configuration files
 - Stores them for automatic configuration
+- **Displays API keys at the end of installation** for Overseerr setup
 
 ### 5. Configure Services (1-2 minutes)
 
@@ -377,10 +378,13 @@ Replace `YOUR_DOMAIN` with the domain you configured during installation.
    - Set library scanner to run automatically
 
 2. **Overseerr Setup:**
-   - Open Overseerr
-   - Connect to your Plex server
-   - Configure Radarr and Sonarr connections
-   - Set up user access and permissions
+   - Open Overseerr at your configured URL
+   - **📖 Follow the detailed guide:** [docker/POST-INSTALL.md](docker/POST-INSTALL.md)
+   - The guide includes step-by-step instructions with exact values for:
+     - Connecting to Plex
+     - Adding Radarr server with API keys and settings
+     - Adding Sonarr server with API keys and settings
+   - API keys are displayed at the end of the installation
 
 3. **Wait for Zilean:**
    - Zilean needs to populate its database
@@ -390,12 +394,20 @@ Replace `YOUR_DOMAIN` with the domain you configured during installation.
 
 ### First Request
 
-1. Open Overseerr
+Once Overseerr is configured (see [docker/POST-INSTALL.md](docker/POST-INSTALL.md)):
+
+1. Open Overseerr at your configured URL
 2. Search for a movie or TV show
-3. Click "Request"
-4. Wait a few minutes
-5. Check Radarr/Sonarr for activity
-6. Once imported, it will appear in Plex
+3. Click "Request" and confirm
+4. Monitor progress:
+   - Check Radarr (for movies) or Sonarr (for TV shows)
+   - The *arr apps will search indexers and send to Decypharr
+   - Decypharr adds the torrent to Real-Debrid
+   - Once cached, the symlink is created automatically
+5. Plex will auto-scan and the content appears in your library
+6. Start streaming!
+
+**Note:** First requests may take 2-5 minutes. Subsequent requests are usually faster as the cache builds up.
 
 ## Troubleshooting
 
@@ -481,7 +493,7 @@ After installation, you can update quality profiles:
 
 ```bash
 cd /mediacenter
-./recyclarr-sync.sh
+./scripts/recyclarr-sync.sh
 ```
 
 ### Add More Indexers
@@ -493,9 +505,9 @@ cd /mediacenter
 
 ### Customize Quality Settings
 
-Edit `/mediacenter/recyclarr.yml` and run:
+Edit `/mediacenter/config/recyclarr.yml` and run:
 ```bash
-./recyclarr-sync.sh
+./scripts/recyclarr-sync.sh
 ```
 
 ### Enable Traefik (Reverse Proxy)

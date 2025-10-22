@@ -16,6 +16,21 @@ fi
 # Get the directory where this script is located
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
+# Load setup libraries
+LIB_DIR="${SCRIPT_DIR}/setup/lib"
+source "${LIB_DIR}/setup-common.sh"
+source "${LIB_DIR}/setup-users.sh"
+source "${LIB_DIR}/setup-api.sh"
+source "${LIB_DIR}/setup-services.sh"
+
+# Initialize logging
+init_logging
+
+log_section "Sailarr Installer"
+log_info "Script directory: ${SCRIPT_DIR}"
+log_info "Logs directory: ${SETUP_LOG_DIR}"
+echo ""
+
 # Check if .env.install exists - if yes, skip configuration and go straight to install
 if [ -f "$SCRIPT_DIR/docker/.env.install" ]; then
     echo "========================================="
@@ -55,26 +70,6 @@ if [ "$SKIP_CONFIGURATION" = false ]; then
     set -a
     source "$SCRIPT_DIR/docker/.env.defaults"
     set +a
-
-    # Function to find next available UID starting from a base
-    find_available_uid() {
-        local base_uid=$1
-        local uid=$base_uid
-        while getent passwd $uid >/dev/null 2>&1; do
-            ((uid++))
-        done
-        echo $uid
-    }
-
-    # Function to find next available GID starting from a base
-    find_available_gid() {
-        local base_gid=$1
-        local gid=$base_gid
-        while getent group $gid >/dev/null 2>&1; do
-            ((gid++))
-        done
-        echo $gid
-    }
 
     # Ask for installation directory
     echo "Installation Directory"
@@ -405,61 +400,16 @@ if [ ! -d "${ROOT_DIR}" ]; then
     sudo chown $USER:$USER "${ROOT_DIR}"
 fi
 
-# Create group first (needed for directory permissions)
-if getent group mediacenter >/dev/null 2>&1; then
-    echo "✓ Group 'mediacenter' already exists"
-else
-    sudo groupadd mediacenter -g $MEDIACENTER_GID
-    echo "✓ Group 'mediacenter' created (GID: $MEDIACENTER_GID)"
-fi
+# Create users and groups using library function
+setup_mediacenter_users $INSTALL_UID $MEDIACENTER_GID
 
 # Set base directory permissions
 sudo chown -R $INSTALL_UID:mediacenter "${ROOT_DIR}"
 sudo chmod 775 "${ROOT_DIR}"
-echo "✓ Base directory permissions set"
+log_success "Base directory permissions set"
 
-# Function to create user safely
-create_user() {
-    local username=$1
-    local user_uid=$2
-
-    if id "$username" >/dev/null 2>&1; then
-        echo "✓ User '$username' already exists"
-    else
-        sudo useradd $username -u $user_uid
-        echo "✓ User '$username' created (UID: $user_uid)"
-    fi
-}
-
-# Create users
-echo ""
-echo "Creating users..."
-create_user rclone $RCLONE_UID
-create_user sonarr $SONARR_UID
-create_user radarr $RADARR_UID
-create_user recyclarr $RECYCLARR_UID
-create_user prowlarr $PROWLARR_UID
-create_user overseerr $OVERSEERR_UID
-create_user plex $PLEX_UID
-create_user decypharr $DECYPHARR_UID
-create_user autoscan $AUTOSCAN_UID
-create_user pinchflat $PINCHFLAT_UID
-
-# Add users to mediacenter group
-echo ""
-echo "Adding users to mediacenter group..."
-sudo usermod -a -G mediacenter $USER
-sudo usermod -a -G mediacenter rclone
-sudo usermod -a -G mediacenter sonarr
-sudo usermod -a -G mediacenter radarr
-sudo usermod -a -G mediacenter recyclarr
-sudo usermod -a -G mediacenter prowlarr
-sudo usermod -a -G mediacenter overseerr
-sudo usermod -a -G mediacenter plex
-sudo usermod -a -G mediacenter decypharr
-sudo usermod -a -G mediacenter autoscan
-sudo usermod -a -G mediacenter pinchflat
-echo "✓ Users added to mediacenter group"
+# Add current user to mediacenter group
+add_user_to_group $USER mediacenter
 
 # Create directories
 echo ""
@@ -493,29 +443,55 @@ echo "✓ Permissions set"
 if [ "$ROOT_DIR" != "$SCRIPT_DIR" ]; then
     echo ""
     echo "Copying docker configuration to installation directory..."
+    log_operation "COPY" "docker directory to ${ROOT_DIR}/docker"
     sudo cp -r "$SCRIPT_DIR/docker" "${ROOT_DIR}/"
     sudo chown -R $INSTALL_UID:mediacenter "${ROOT_DIR}/docker"
     echo "✓ Docker configuration copied to ${ROOT_DIR}/docker"
 
-    # Copy rclone.conf
-    sudo cp "$SCRIPT_DIR/rclone.conf" "${ROOT_DIR}/"
-    sudo chown rclone:mediacenter "${ROOT_DIR}/rclone.conf"
-    echo "✓ rclone.conf copied to ${ROOT_DIR}/"
-
     # Copy recyclarr configuration
-    sudo cp "$SCRIPT_DIR/recyclarr.yml" "${ROOT_DIR}/"
-    sudo cp "$SCRIPT_DIR/recyclarr-sync.sh" "${ROOT_DIR}/"
+    log_operation "COPY" "recyclarr.yml and recyclarr-sync.sh to ${ROOT_DIR}/"
+    sudo cp "$SCRIPT_DIR/config/recyclarr.yml" "${ROOT_DIR}/"
+    sudo cp "$SCRIPT_DIR/scripts/recyclarr-sync.sh" "${ROOT_DIR}/"
     sudo chown $INSTALL_UID:mediacenter "${ROOT_DIR}/recyclarr.yml" "${ROOT_DIR}/recyclarr-sync.sh"
     sudo chmod +x "${ROOT_DIR}/recyclarr-sync.sh"
     echo "✓ Recyclarr configuration copied to ${ROOT_DIR}/"
 fi
 
+# Copy rclone.conf (ALWAYS needed, even if ROOT_DIR == SCRIPT_DIR)
+echo ""
+log_operation "COPY" "rclone.conf to ${ROOT_DIR}/"
+
+# Verify source is a file
+if [ ! -f "$SCRIPT_DIR/config/rclone.conf" ]; then
+    log_error "Source rclone.conf is not a file: $SCRIPT_DIR/config/rclone.conf"
+    exit 1
+fi
+
+# Remove destination if it's a directory
+if [ -d "${ROOT_DIR}/rclone.conf" ]; then
+    log_warning "Destination rclone.conf is a directory, removing it"
+    sudo rm -rf "${ROOT_DIR}/rclone.conf"
+fi
+
+sudo cp "$SCRIPT_DIR/config/rclone.conf" "${ROOT_DIR}/"
+sudo chown rclone:mediacenter "${ROOT_DIR}/rclone.conf"
+
+# Verify it was copied as a file
+if [ ! -f "${ROOT_DIR}/rclone.conf" ]; then
+    log_error "Failed to copy rclone.conf as a file to ${ROOT_DIR}/"
+    exit 1
+fi
+
+log_success "rclone.conf copied successfully to ${ROOT_DIR}/"
+
 # Download custom indexer definitions for Prowlarr
 echo ""
 echo "Downloading custom indexer definitions..."
+log_operation "MKDIR" "${ROOT_DIR}/config/prowlarr-config/Definitions/Custom"
 sudo mkdir -p ${ROOT_DIR}/config/prowlarr-config/Definitions/Custom
 
 # Download Torrentio from official repository
+log_operation "DOWNLOAD" "Torrentio indexer definition from GitHub"
 curl -sL https://github.com/dreulavelle/Prowlarr-Indexers/raw/main/Custom/torrentio.yml -o /tmp/torrentio.yml
 sudo cp /tmp/torrentio.yml ${ROOT_DIR}/config/prowlarr-config/Definitions/Custom/
 sudo chown prowlarr:mediacenter ${ROOT_DIR}/config/prowlarr-config/Definitions/Custom/torrentio.yml
@@ -669,8 +645,8 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     echo "Installing mount healthcheck scripts..."
 
     # Copy healthcheck scripts to /usr/local/bin/
-    sudo cp "$SCRIPT_DIR/arrs-mount-healthcheck.sh" /usr/local/bin/
-    sudo cp "$SCRIPT_DIR/plex-mount-healthcheck.sh" /usr/local/bin/
+    sudo cp "$SCRIPT_DIR/scripts/health/arrs-mount-healthcheck.sh" /usr/local/bin/
+    sudo cp "$SCRIPT_DIR/scripts/health/plex-mount-healthcheck.sh" /usr/local/bin/
 
     # Set permissions
     sudo chmod 775 /usr/local/bin/arrs-mount-healthcheck.sh
@@ -713,7 +689,7 @@ echo "========================================="
 echo "Auto-Configuration via API"
 echo "========================================="
 echo ""
-read -p "Do you want to auto-configure Radarr, Sonarr, and Prowlarr? (requires docker) (y/n): " -r
+read -p "Do you want to auto-configure Radarr, Sonarr, and Prowlarr? (y/n): " -r
 echo ""
 
 if [[ $REPLY =~ ^[Yy]$ ]]; then
@@ -740,8 +716,103 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     fi
 
     # Start all services (up.sh will handle Traefik profile automatically based on .env.local)
+    log_operation "DOCKER_COMPOSE" "Starting all services"
     ./up.sh
-    echo "✓ Services started"
+
+    # Capture docker compose exit code
+    COMPOSE_EXIT_CODE=$?
+
+    if [ $COMPOSE_EXIT_CODE -ne 0 ]; then
+        log_error "Docker Compose failed to start services (exit code: $COMPOSE_EXIT_CODE)"
+        log_error "Check the output above for errors"
+        exit 1
+    fi
+
+    # Validate all services started successfully
+    echo ""
+    log_info "Validating all services started correctly..."
+
+    # Define expected services (exclude optional ones like traefik, rdtclient)
+    EXPECTED_SERVICES=(
+        "zurg"
+        "rclone"
+        "decypharr"
+        "prowlarr"
+        "radarr"
+        "sonarr"
+        "overseerr"
+        "plex"
+        "zilean"
+        "zilean-postgres"
+        "homarr"
+        "dashdot"
+        "autoscan"
+        "tautulli"
+        "watchtower"
+        "plextraktsync"
+        "pinchflat"
+    )
+
+    # Add traefik services if enabled
+    if [ "$TRAEFIK_ENABLED" = true ]; then
+        EXPECTED_SERVICES+=("traefik" "traefik-socket-proxy")
+    fi
+
+    # Count running containers
+    RUNNING_COUNT=$(docker ps --filter "status=running" --format "{{.Names}}" | wc -l)
+    EXPECTED_COUNT=${#EXPECTED_SERVICES[@]}
+
+    log_debug "Expected services: $EXPECTED_COUNT, Running containers: $RUNNING_COUNT"
+
+    # Check if all expected services are running
+    FAILED_SERVICES=()
+    for service in "${EXPECTED_SERVICES[@]}"; do
+        if ! docker ps --format "{{.Names}}" | grep -q "^${service}$"; then
+            FAILED_SERVICES+=("$service")
+        fi
+    done
+
+    # Check for unhealthy containers
+    UNHEALTHY_SERVICES=$(docker ps --filter "health=unhealthy" --format "{{.Names}}" 2>/dev/null || true)
+
+    # Report results
+    if [ ${#FAILED_SERVICES[@]} -gt 0 ]; then
+        log_error "The following services failed to start:"
+        for service in "${FAILED_SERVICES[@]}"; do
+            echo "  - $service"
+            log_debug "Check logs with: docker logs $service"
+        done
+        echo ""
+        log_error "Installation aborted due to failed services"
+        log_error "Run 'docker compose logs' to see detailed error messages"
+        exit 1
+    fi
+
+    if [ -n "$UNHEALTHY_SERVICES" ]; then
+        log_warning "The following services are unhealthy (may still be starting):"
+        echo "$UNHEALTHY_SERVICES" | while read service; do
+            echo "  - $service"
+        done
+        echo ""
+        log_info "Waiting 60 seconds for services to become healthy..."
+        sleep 60
+
+        # Check again
+        STILL_UNHEALTHY=$(docker ps --filter "health=unhealthy" --format "{{.Names}}" 2>/dev/null || true)
+        if [ -n "$STILL_UNHEALTHY" ]; then
+            log_error "The following services are still unhealthy after waiting:"
+            echo "$STILL_UNHEALTHY" | while read service; do
+                echo "  - $service"
+                echo "  Check logs: docker logs $service"
+            done
+            echo ""
+            log_error "Installation aborted due to unhealthy services"
+            exit 1
+        fi
+    fi
+
+    log_success "All $EXPECTED_COUNT services started successfully"
+    echo "✓ Service validation passed"
 
     # Function to wait for service to be ready
     wait_for_service() {
@@ -793,153 +864,99 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     # Wait a bit more for config files to be written
     sleep 5
 
-    RADARR_API_KEY=$(grep -oP '<ApiKey>\K[^<]+' ${ROOT_DIR}/config/radarr-config/config.xml 2>/dev/null || echo "")
-    SONARR_API_KEY=$(grep -oP '<ApiKey>\K[^<]+' ${ROOT_DIR}/config/sonarr-config/config.xml 2>/dev/null || echo "")
-    PROWLARR_API_KEY=$(grep -oP '<ApiKey>\K[^<]+' ${ROOT_DIR}/config/prowlarr-config/config.xml 2>/dev/null || echo "")
+    # Extract API keys using library function
+    RADARR_API_KEY=$(extract_api_key "radarr" | tail -1)
+    SONARR_API_KEY=$(extract_api_key "sonarr" | tail -1)
+    PROWLARR_API_KEY=$(extract_api_key "prowlarr" | tail -1)
 
     if [ -z "$RADARR_API_KEY" ] || [ -z "$SONARR_API_KEY" ] || [ -z "$PROWLARR_API_KEY" ]; then
-        echo "✗ Failed to retrieve API keys. Services may not be fully initialized."
-        echo "You can configure services manually or run this script again later."
-    else
-        echo "✓ API keys retrieved"
-        echo "  - Radarr:   $RADARR_API_KEY"
-        echo "  - Sonarr:   $SONARR_API_KEY"
-        echo "  - Prowlarr: $PROWLARR_API_KEY"
+        log_error "Failed to retrieve API keys. Services may not be fully initialized."
+        log_error "Missing API keys:"
+        [ -z "$RADARR_API_KEY" ] && log_error "  - Radarr API key is empty"
+        [ -z "$SONARR_API_KEY" ] && log_error "  - Sonarr API key is empty"
+        [ -z "$PROWLARR_API_KEY" ] && log_error "  - Prowlarr API key is empty"
+        log_error "Check service logs: docker logs radarr | docker logs sonarr | docker logs prowlarr"
+        log_error "Installation aborted - cannot continue without API keys"
+        exit 1
+    fi
+
+    log_success "API keys retrieved"
+    echo "  - Radarr:   $RADARR_API_KEY"
+    echo "  - Sonarr:   $SONARR_API_KEY"
+    echo "  - Prowlarr: $PROWLARR_API_KEY"
 
         # Configure Radarr
-        echo ""
-        echo "Configuring Radarr..."
-
-        # Add root folder
-        curl -s -X POST "http://localhost:7878/api/v3/rootfolder" \
-            -H "X-Api-Key: $RADARR_API_KEY" \
-            -H "Content-Type: application/json" \
-            -d '{"path":"/data/media/movies"}' > /dev/null 2>&1
-        echo "  ✓ Root folder added: /data/media/movies"
-
-        # Add Decypharr as download client
-        curl -s -X POST "http://localhost:7878/api/v3/downloadclient" \
-            -H "X-Api-Key: $RADARR_API_KEY" \
-            -H "Content-Type: application/json" \
-            -d '{
-                "enable": true,
-                "protocol": "torrent",
-                "priority": 1,
-                "removeCompletedDownloads": true,
-                "removeFailedDownloads": true,
-                "name": "Decypharr",
-                "fields": [
-                    {"name": "host", "value": "decypharr"},
-                    {"name": "port", "value": 8282},
-                    {"name": "useSsl", "value": false},
-                    {"name": "urlBase", "value": ""},
-                    {"name": "username", "value": "http://radarr:7878"},
-                    {"name": "password", "value": "'"$RADARR_API_KEY"'"},
-                    {"name": "movieCategory", "value": "movies"},
-                    {"name": "recentMoviePriority", "value": 0},
-                    {"name": "olderMoviePriority", "value": 0},
-                    {"name": "initialState", "value": 0},
-                    {"name": "sequentialOrder", "value": false},
-                    {"name": "firstAndLast", "value": false}
-                ],
-                "implementationName": "qBittorrent",
-                "implementation": "QBittorrent",
-                "configContract": "QBittorrentSettings",
-                "tags": []
-            }' > /dev/null 2>&1
-        echo "  ✓ Download client added: Decypharr"
-
-        # Add remote path mapping for Decypharr
-        curl -s -X POST "http://localhost:7878/api/v3/remotepathmapping" \
-            -H "X-Api-Key: $RADARR_API_KEY" \
-            -H "Content-Type: application/json" \
-            -d '{
-                "host": "decypharr",
-                "remotePath": "/data/media/radarr",
-                "localPath": "/data/media/movies"
-            }' > /dev/null 2>&1
-        echo "  ✓ Remote path mapping added"
+        RADARR_API_KEY=$(configure_arr_service "radarr" 7878 "movies" "decypharr" 8282 "$RADARR_API_KEY" | tail -1)
 
         # Configure Radarr authentication if enabled
         if [ "$AUTH_ENABLED" = true ]; then
-            echo "  ⟳ Configuring authentication..."
+            echo "  ⟳ Configuring Radarr authentication..."
+
             # Get current config
             CONFIG=$(curl -s "http://localhost:7878/api/v3/config/host" -H "X-Api-Key: $RADARR_API_KEY")
+            if [ -z "$CONFIG" ]; then
+                log_error "Failed to get Radarr config for authentication setup"
+                log_error "Installation aborted - cannot configure authentication"
+                exit 1
+            fi
+
             # Update authentication settings
-            echo "$CONFIG" | jq --arg user "$AUTH_USERNAME" --arg pass "$AUTH_PASSWORD" \
-                '. + {authenticationMethod: "forms", username: $user, password: $pass, passwordConfirmation: $pass, authenticationRequired: "enabled"}' | \
-                curl -s -X PUT "http://localhost:7878/api/v3/config/host" \
+            UPDATED_CONFIG=$(echo "$CONFIG" | jq --arg user "$AUTH_USERNAME" --arg pass "$AUTH_PASSWORD" \
+                '. + {authenticationMethod: "forms", username: $user, password: $pass, passwordConfirmation: $pass, authenticationRequired: "enabled"}')
+
+            # Send update and capture response with HTTP code
+            RESPONSE=$(curl -s -w '\n%{http_code}' -X PUT "http://localhost:7878/api/v3/config/host" \
                 -H "X-Api-Key: $RADARR_API_KEY" \
                 -H "Content-Type: application/json" \
-                -d @- > /dev/null 2>&1
-            echo "  ✓ Authentication configured"
+                -d "$UPDATED_CONFIG")
+
+            HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+
+            if [[ "$HTTP_CODE" =~ ^2 ]]; then
+                echo "  ✓ Radarr authentication configured (HTTP $HTTP_CODE)"
+            else
+                log_error "Failed to configure Radarr authentication (HTTP $HTTP_CODE)"
+                log_error "Response: $(echo "$RESPONSE" | head -n -1)"
+                log_error "Installation aborted - authentication configuration failed"
+                exit 1
+            fi
         fi
 
         # Configure Sonarr
-        echo ""
-        echo "Configuring Sonarr..."
-
-        # Add root folder
-        curl -s -X POST "http://localhost:8989/api/v3/rootfolder" \
-            -H "X-Api-Key: $SONARR_API_KEY" \
-            -H "Content-Type: application/json" \
-            -d '{"path":"/data/media/tv"}' > /dev/null 2>&1
-        echo "  ✓ Root folder added: /data/media/tv"
-
-        # Add Decypharr as download client
-        curl -s -X POST "http://localhost:8989/api/v3/downloadclient" \
-            -H "X-Api-Key: $SONARR_API_KEY" \
-            -H "Content-Type: application/json" \
-            -d '{
-                "enable": true,
-                "protocol": "torrent",
-                "priority": 1,
-                "removeCompletedDownloads": true,
-                "removeFailedDownloads": true,
-                "name": "Decypharr",
-                "fields": [
-                    {"name": "host", "value": "decypharr"},
-                    {"name": "port", "value": 8282},
-                    {"name": "useSsl", "value": false},
-                    {"name": "urlBase", "value": ""},
-                    {"name": "username", "value": "http://sonarr:8989"},
-                    {"name": "password", "value": "'"$SONARR_API_KEY"'"},
-                    {"name": "tvCategory", "value": "tv"},
-                    {"name": "recentTvPriority", "value": 0},
-                    {"name": "olderTvPriority", "value": 0},
-                    {"name": "initialState", "value": 0},
-                    {"name": "sequentialOrder", "value": false},
-                    {"name": "firstAndLast", "value": false}
-                ],
-                "implementationName": "qBittorrent",
-                "implementation": "QBittorrent",
-                "configContract": "QBittorrentSettings",
-                "tags": []
-            }' > /dev/null 2>&1
-        echo "  ✓ Download client added: Decypharr"
-
-        # Add remote path mapping for Decypharr
-        curl -s -X POST "http://localhost:8989/api/v3/remotepathmapping" \
-            -H "X-Api-Key: $SONARR_API_KEY" \
-            -H "Content-Type: application/json" \
-            -d '{
-                "host": "decypharr",
-                "remotePath": "/data/media/sonarr",
-                "localPath": "/data/media/tv"
-            }' > /dev/null 2>&1
-        echo "  ✓ Remote path mapping added"
+        SONARR_API_KEY=$(configure_arr_service "sonarr" 8989 "tv" "decypharr" 8282 "$SONARR_API_KEY" | tail -1)
 
         # Configure Sonarr authentication if enabled
         if [ "$AUTH_ENABLED" = true ]; then
-            echo "  ⟳ Configuring authentication..."
+            echo "  ⟳ Configuring Sonarr authentication..."
+
+            # Get current config
             CONFIG=$(curl -s "http://localhost:8989/api/v3/config/host" -H "X-Api-Key: $SONARR_API_KEY")
-            echo "$CONFIG" | jq --arg user "$AUTH_USERNAME" --arg pass "$AUTH_PASSWORD" \
-                '. + {authenticationMethod: "forms", username: $user, password: $pass, passwordConfirmation: $pass, authenticationRequired: "enabled"}' | \
-                curl -s -X PUT "http://localhost:8989/api/v3/config/host" \
+            if [ -z "$CONFIG" ]; then
+                log_error "Failed to get Sonarr config for authentication setup"
+                log_error "Installation aborted - cannot configure authentication"
+                exit 1
+            fi
+
+            # Update authentication settings
+            UPDATED_CONFIG=$(echo "$CONFIG" | jq --arg user "$AUTH_USERNAME" --arg pass "$AUTH_PASSWORD" \
+                '. + {authenticationMethod: "forms", username: $user, password: $pass, passwordConfirmation: $pass, authenticationRequired: "enabled"}')
+
+            # Send update and capture response with HTTP code
+            RESPONSE=$(curl -s -w '\n%{http_code}' -X PUT "http://localhost:8989/api/v3/config/host" \
                 -H "X-Api-Key: $SONARR_API_KEY" \
                 -H "Content-Type: application/json" \
-                -d @- > /dev/null 2>&1
-            echo "  ✓ Authentication configured"
+                -d "$UPDATED_CONFIG")
+
+            HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+
+            if [[ "$HTTP_CODE" =~ ^2 ]]; then
+                echo "  ✓ Sonarr authentication configured (HTTP $HTTP_CODE)"
+            else
+                log_error "Failed to configure Sonarr authentication (HTTP $HTTP_CODE)"
+                log_error "Response: $(echo "$RESPONSE" | head -n -1)"
+                log_error "Installation aborted - authentication configuration failed"
+                exit 1
+            fi
         fi
 
         # Configure Prowlarr
@@ -1037,45 +1054,16 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
             }' > /dev/null 2>&1
         echo "  ✓ Indexer added: YTS"
 
-        # Add Radarr as application in Prowlarr (for sync)
-        curl -s -X POST "http://localhost:9696/api/v1/applications" \
-            -H "X-Api-Key: $PROWLARR_API_KEY" \
-            -H "Content-Type: application/json" \
-            -d '{
-                "name": "Radarr",
-                "syncLevel": "fullSync",
-                "implementation": "Radarr",
-                "implementationName": "Radarr",
-                "configContract": "RadarrSettings",
-                "fields": [
-                    {"name": "prowlarrUrl", "value": "http://prowlarr:9696"},
-                    {"name": "baseUrl", "value": "http://radarr:7878"},
-                    {"name": "apiKey", "value": "'"$RADARR_API_KEY"'"},
-                    {"name": "syncCategories", "value": [2000,2010,2020,2030,2040,2045,2050,2060]}
-                ],
-                "tags": []
-            }' > /dev/null 2>&1
-        echo "  ✓ Application added: Radarr (sync enabled)"
+        # Add Radarr and Sonarr as applications in Prowlarr
+        if ! add_arr_to_prowlarr "radarr" 7878 "$RADARR_API_KEY" 9696 "$PROWLARR_API_KEY"; then
+            log_error "Installation aborted - failed to add Radarr to Prowlarr"
+            exit 1
+        fi
 
-        # Add Sonarr as application in Prowlarr (for sync)
-        curl -s -X POST "http://localhost:9696/api/v1/applications" \
-            -H "X-Api-Key: $PROWLARR_API_KEY" \
-            -H "Content-Type: application/json" \
-            -d '{
-                "name": "Sonarr",
-                "syncLevel": "fullSync",
-                "implementation": "Sonarr",
-                "implementationName": "Sonarr",
-                "configContract": "SonarrSettings",
-                "fields": [
-                    {"name": "prowlarrUrl", "value": "http://prowlarr:9696"},
-                    {"name": "baseUrl", "value": "http://sonarr:8989"},
-                    {"name": "apiKey", "value": "'"$SONARR_API_KEY"'"},
-                    {"name": "syncCategories", "value": [5000,5010,5020,5030,5040,5045,5050,5060,5070,5080,5090]}
-                ],
-                "tags": []
-            }' > /dev/null 2>&1
-        echo "  ✓ Application added: Sonarr (sync enabled)"
+        if ! add_arr_to_prowlarr "sonarr" 8989 "$SONARR_API_KEY" 9696 "$PROWLARR_API_KEY"; then
+            log_error "Installation aborted - failed to add Sonarr to Prowlarr"
+            exit 1
+        fi
 
         # Trigger indexer sync to all applications
         echo ""
@@ -1111,32 +1099,25 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
         echo "  • Set up media naming conventions for Plex compatibility"
         echo ""
 
-        # Delete default Radarr quality profiles
-        echo "Removing default Radarr quality profiles..."
-        RADARR_PROFILES=$(curl -s "http://localhost:7878/api/v3/qualityprofile" -H "X-Api-Key: $RADARR_API_KEY")
-        echo "$RADARR_PROFILES" | jq -r '.[].id' | while read profile_id; do
-            curl -s -X DELETE "http://localhost:7878/api/v3/qualityprofile/$profile_id" \
-                -H "X-Api-Key: $RADARR_API_KEY" > /dev/null 2>&1
-        done
-        echo "  ✓ Default Radarr profiles removed"
-
-        # Delete default Sonarr quality profiles
-        echo "Removing default Sonarr quality profiles..."
-        SONARR_PROFILES=$(curl -s "http://localhost:8989/api/v3/qualityprofile" -H "X-Api-Key: $SONARR_API_KEY")
-        echo "$SONARR_PROFILES" | jq -r '.[].id' | while read profile_id; do
-            curl -s -X DELETE "http://localhost:8989/api/v3/qualityprofile/$profile_id" \
-                -H "X-Api-Key: $SONARR_API_KEY" > /dev/null 2>&1
-        done
-        echo "  ✓ Default Sonarr profiles removed"
+        # Delete default quality profiles
+        remove_default_profiles "radarr" 7878 "$RADARR_API_KEY"
+        remove_default_profiles "sonarr" 8989 "$SONARR_API_KEY"
         echo ""
 
         # Run Recyclarr to create TRaSH Guide profiles
         echo "Creating TRaSH Guide quality profiles..."
 
-        # Create temporary recyclarr config with API keys
-        cp "${ROOT_DIR}/recyclarr.yml" /tmp/recyclarr-temp.yml
-        sed -i "10s/api_key:.*/api_key: ${RADARR_API_KEY}/" /tmp/recyclarr-temp.yml
-        sed -i "205s/api_key:.*/api_key: ${SONARR_API_KEY}/" /tmp/recyclarr-temp.yml
+        # Create temporary recyclarr config with API keys injected
+        # Uses AWK pattern matching instead of hardcoded line numbers for robustness
+        awk -v radarr_key="${RADARR_API_KEY}" -v sonarr_key="${SONARR_API_KEY}" '
+            /^radarr:/ {in_radarr=1; in_sonarr=0}
+            /^sonarr:/ {in_radarr=0; in_sonarr=1}
+            /api_key:$/ {
+                if (in_radarr) {print "    api_key: " radarr_key; next}
+                if (in_sonarr) {print "    api_key: " sonarr_key; next}
+            }
+            {print}
+        ' "${ROOT_DIR}/recyclarr.yml" > /tmp/recyclarr-temp.yml
 
         docker run --rm \
             --network mediacenter \
@@ -1180,7 +1161,6 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 
         echo ""
         echo "✓ Auto-configuration completed successfully"
-    fi
 
     # Restart all services to ensure everything is running with the new configuration
     echo ""
@@ -1270,8 +1250,14 @@ echo "   • YouTube: /data/media/youtube"
 echo ""
 echo "   OVERSEERR - Connect to Plex and Radarr/Sonarr:"
 echo "   • Sign in with Plex account"
-echo "   • Add Radarr and Sonarr with their API keys"
+echo "   • Add Radarr and Sonarr with their API keys (see below)"
 echo "   • Configure quality profiles and root folders"
+echo "   • Detailed guide: docker/POST-INSTALL.md"
+echo ""
+echo "   API KEYS FOR OVERSEERR CONFIGURATION:"
+echo "   • Radarr API Key: ${RADARR_API_KEY}"
+echo "   • Sonarr API Key: ${SONARR_API_KEY}"
+echo "   • Prowlarr API Key: ${PROWLARR_API_KEY}"
 echo ""
 echo "   PINCHFLAT - Configure YouTube downloads (optional)"
 echo "   TAUTULLI - Connect to Plex for statistics (optional)"
@@ -1292,4 +1278,54 @@ echo "   ./down.sh    # Stop all services"
 echo "   ./restart.sh # Restart all services"
 echo ""
 echo "For detailed setup guide, visit the documentation."
+echo ""
 echo "========================================="
+echo "Installation logs saved to:"
+echo "  ${SETUP_LOG_FILE}"
+echo "  ${SETUP_TRACE_FILE}"
+echo "========================================="
+log_info "Installation completed successfully"
+log_to_file "COMPLETE" "Installation finished at $(date)"
+
+# Ask if user wants to remove the installer repository
+echo ""
+echo "========================================="
+echo "Cleanup"
+echo "========================================="
+echo ""
+echo "The installer repository is no longer needed. All configuration"
+echo "files have been copied to ${ROOT_DIR}."
+echo ""
+echo "Installation directory: $(pwd)"
+echo ""
+read -p "Do you want to remove the installer repository? [y/N]: " -n 1 -r
+echo ""
+
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    # Use SCRIPT_DIR that was calculated at the start of the script
+    # This is more reliable than recalculating from BASH_SOURCE
+    log_info "Removing installer repository: ${SCRIPT_DIR}"
+
+    # Move to parent directory before deletion
+    cd "${SCRIPT_DIR}/.."
+
+    # Remove the installer directory
+    rm -rf "${SCRIPT_DIR}"
+
+    if [ $? -eq 0 ]; then
+        log_success "Installer repository removed successfully"
+        echo ""
+        echo "The sailarr-installer directory has been deleted."
+        echo "All your configuration is preserved in ${ROOT_DIR}"
+    else
+        log_error "Failed to remove installer repository"
+        echo "You can manually delete it later: rm -rf ${SCRIPT_DIR}"
+    fi
+else
+    log_info "Installer repository kept at: ${SCRIPT_DIR}"
+    echo ""
+    echo "You can manually remove it later if needed:"
+    echo "  rm -rf ${SCRIPT_DIR}"
+fi
+
+echo ""

@@ -148,6 +148,19 @@ Replace `YOUR_DOMAIN` with your configured domain name.
 
 **Note:** If authentication is enabled, you'll be prompted for username/password when accessing any service.
 
+
+## Post-Installation Configuration
+
+After the automated installation completes, some services require manual configuration through their web interfaces:
+
+**📖 See [docker/POST-INSTALL.md](docker/POST-INSTALL.md) for detailed step-by-step instructions on:**
+
+- **Overseerr Setup** - Connect Plex account, select libraries, and add Radarr/Sonarr servers
+- **Tautulli Setup** - Connect to Plex for analytics and monitoring
+- **Additional Configuration** - Optional tweaks and customizations
+
+The automated installer handles 95% of the setup, but these services need your Plex account credentials or user preferences that can't be automated.
+
 ## How It Works
 
 The workflow is completely automated:
@@ -214,7 +227,7 @@ To manually update profiles after installation:
 
 ```bash
 cd /YOUR_INSTALL_DIR
-./recyclarr-sync.sh
+./scripts/recyclarr-sync.sh
 ```
 
 ## Directory Structure
@@ -249,11 +262,24 @@ cd /YOUR_INSTALL_DIR
 │   ├── down.sh       # Stop all services
 │   ├── restart.sh    # Restart all services
 │   └── compose files...
-├── setup.sh           # Installation script
-├── recyclarr.yml      # TRaSH Guide configuration
-├── recyclarr-sync.sh  # Manual profile update script
-├── arrs-mount-healthcheck.sh
-└── plex-mount-healthcheck.sh
+├── setup/            # Setup scripts and libraries
+│   ├── lib/         # Modular function libraries
+│   └── utils/       # Setup utilities
+├── scripts/          # Maintenance scripts
+│   ├── health/      # Health check scripts
+│   │   ├── arrs-mount-healthcheck.sh
+│   │   └── plex-mount-healthcheck.sh
+│   ├── maintenance/ # Backup scripts
+│   └── recyclarr-sync.sh
+├── config/           # Configuration templates
+│   ├── recyclarr.yml
+│   ├── rclone.conf
+│   ├── indexers/
+│   └── autoscan/
+├── setup.sh          # Main installation script
+├── README.md
+├── INSTALLATION.md
+└── LICENSE
 ```
 
 ## Troubleshooting
@@ -365,8 +391,8 @@ crontab -l | grep healthcheck
 
 **Manually run health checks:**
 ```bash
-/YOUR_INSTALL_DIR/plex-mount-healthcheck.sh
-/YOUR_INSTALL_DIR/arrs-mount-healthcheck.sh
+/YOUR_INSTALL_DIR/scripts/health/plex-mount-healthcheck.sh
+/YOUR_INSTALL_DIR/scripts/health/arrs-mount-healthcheck.sh
 ```
 
 ### Update Containers

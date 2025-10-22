@@ -39,14 +39,27 @@ echo "  • Configure custom formats from TRaSH Guides"
 echo "  • Set up media naming conventions for Plex"
 echo ""
 
+# Create temporary config with API keys injected
+TEMP_CONFIG="/tmp/recyclarr-temp-$$.yml"
+awk -v radarr_key="${RADARR_API_KEY}" -v sonarr_key="${SONARR_API_KEY}" '
+    /^radarr:/ {in_radarr=1; in_sonarr=0}
+    /^sonarr:/ {in_radarr=0; in_sonarr=1}
+    /api_key:$/ {
+        if (in_radarr) {print "    api_key: " radarr_key; next}
+        if (in_sonarr) {print "    api_key: " sonarr_key; next}
+    }
+    {print}
+' "${SCRIPT_DIR}/../config/recyclarr.yml" > "$TEMP_CONFIG"
+
 # Run Recyclarr with Docker
 docker run --rm \
     --network mediacenter \
-    -v "${SCRIPT_DIR}/recyclarr.yml:/config/recyclarr.yml:ro" \
-    -e RADARR_API_KEY="${RADARR_API_KEY}" \
-    -e SONARR_API_KEY="${SONARR_API_KEY}" \
+    -v "${TEMP_CONFIG}:/config/recyclarr.yml:ro" \
     ghcr.io/recyclarr/recyclarr:latest \
     sync
+
+# Cleanup
+rm -f "$TEMP_CONFIG"
 
 echo ""
 echo "✓ Recyclarr sync completed successfully!"
