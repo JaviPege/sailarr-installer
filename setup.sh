@@ -60,6 +60,29 @@ ask_user_input() {
     eval "$output_var='$user_input'"
 }
 
+# Ask user for password (hidden input)
+# Usage: ask_password "prompt" "required" "output_var"
+ask_password() {
+    local prompt="$1"
+    local required="$2"
+    local output_var="$3"
+
+    read -sp "$prompt" user_password
+    echo ""
+
+    # Validate if required
+    if [ "$required" = "true" ]; then
+        while [ -z "$user_password" ]; do
+            echo "ERROR: This field is required!"
+            read -sp "$prompt" user_password
+            echo ""
+        done
+    fi
+
+    # Store in output variable
+    eval "$output_var='$user_password'"
+}
+
 # Check for existing configuration
 check_existing_config() {
     if [ -f "$SCRIPT_DIR/docker/.env.install" ]; then
@@ -169,63 +192,65 @@ NOTE: Claim tokens expire in 4 minutes. Leave empty to configure later." \
         "PLEX_CLAIM"
 
     # Ask for authentication credentials (optional)
-    echo "Service Authentication (Optional)"
-    echo "----------------------------------"
-    echo "Configure username/password for Radarr, Sonarr, and Prowlarr web UI."
-    echo "Leave empty to skip and configure manually later."
-    read -p "Do you want to configure authentication? (y/n): " -r
-    echo ""
+    ask_user_input \
+        "Service Authentication (Optional)" \
+        "Configure username/password for Radarr, Sonarr, and Prowlarr web UI.
+Leave empty to skip and configure manually later." \
+        "Do you want to configure authentication? (y/n): " \
+        "" \
+        "false" \
+        "auth_choice"
 
     AUTH_ENABLED=false
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        read -p "Enter username: " AUTH_USERNAME
-        while [ -z "$AUTH_USERNAME" ]; do
-            echo "ERROR: Username cannot be empty!"
-            read -p "Enter username: " AUTH_USERNAME
-        done
+    if [[ $auth_choice =~ ^[Yy]$ ]]; then
+        ask_user_input \
+            "" \
+            "" \
+            "Enter username: " \
+            "" \
+            "true" \
+            "AUTH_USERNAME"
 
-        read -sp "Enter password: " AUTH_PASSWORD
-        echo ""
-        while [ -z "$AUTH_PASSWORD" ]; do
-            echo "ERROR: Password cannot be empty!"
-            read -sp "Enter password: " AUTH_PASSWORD
-            echo ""
-        done
+        ask_password "Enter password: " "true" "AUTH_PASSWORD"
 
         AUTH_ENABLED=true
         echo "✓ Authentication will be configured"
+        echo ""
     else
         echo "Authentication skipped - configure manually later"
+        echo ""
     fi
-    echo ""
 
     # Ask for Traefik configuration
-    echo "Traefik Reverse Proxy (Optional)"
-    echo "---------------------------------"
-    echo "Traefik provides a reverse proxy for accessing services via domain names."
-    echo "If disabled, services will be accessible via their direct ports."
-    read -p "Do you want to enable Traefik? (y/n): " -r
-    echo ""
+    ask_user_input \
+        "Traefik Reverse Proxy (Optional)" \
+        "Traefik provides a reverse proxy for accessing services via domain names.
+If disabled, services will be accessible via their direct ports." \
+        "Do you want to enable Traefik? (y/n): " \
+        "" \
+        "false" \
+        "traefik_choice"
 
     TRAEFIK_ENABLED=true
-    if [[ $REPLY =~ ^[Nn]$ ]]; then
+    if [[ $traefik_choice =~ ^[Nn]$ ]]; then
         TRAEFIK_ENABLED=false
         USER_DOMAIN="localhost"
         echo "Traefik disabled - services will use direct port access"
+        echo ""
     else
         TRAEFIK_ENABLED=true
         echo "✓ Traefik will be enabled"
         echo ""
 
         # Ask for domain name (only if Traefik is enabled)
-        echo "Domain/Hostname Configuration"
-        echo "------------------------------"
-        echo "This will be used for Traefik routing (e.g., radarr.yourdomain.local)"
-        echo "Current default: ${DOMAIN_NAME:-mediacenter.local}"
-        read -p "Enter domain/hostname [press Enter for default]: " USER_DOMAIN
-        USER_DOMAIN=${USER_DOMAIN:-${DOMAIN_NAME:-mediacenter.local}}
+        ask_user_input \
+            "Domain/Hostname Configuration" \
+            "This will be used for Traefik routing (e.g., radarr.yourdomain.local)" \
+            "Enter domain/hostname [press Enter for default]: " \
+            "${DOMAIN_NAME:-mediacenter.local}" \
+            "false" \
+            "USER_DOMAIN"
     fi
-    echo ""
 
     # Check and auto-fix UID/GID conflicts
     echo "Checking for UID/GID conflicts..."
