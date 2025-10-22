@@ -6,6 +6,7 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TEMPLATES_DIR="${SCRIPT_DIR}/../templates"
+ROOT_DIR="${ROOT_DIR:-/mediacenter}"  # Use environment variable or default to /mediacenter
 
 # Source library functions
 source "${SCRIPT_DIR}/../setup/lib/setup-common.sh"
