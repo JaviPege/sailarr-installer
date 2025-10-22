@@ -1107,10 +1107,17 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
         # Run Recyclarr to create TRaSH Guide profiles
         echo "Creating TRaSH Guide quality profiles..."
 
-        # Create temporary recyclarr config with API keys
-        cp "${ROOT_DIR}/recyclarr.yml" /tmp/recyclarr-temp.yml
-        sed -i "10s|api_key:.*|api_key: ${RADARR_API_KEY}|" /tmp/recyclarr-temp.yml
-        sed -i "210s|api_key:.*|api_key: ${SONARR_API_KEY}|" /tmp/recyclarr-temp.yml
+        # Create temporary recyclarr config with API keys injected
+        # Uses AWK pattern matching instead of hardcoded line numbers for robustness
+        awk -v radarr_key="${RADARR_API_KEY}" -v sonarr_key="${SONARR_API_KEY}" '
+            /^radarr:/ {in_radarr=1; in_sonarr=0}
+            /^sonarr:/ {in_radarr=0; in_sonarr=1}
+            /api_key:$/ {
+                if (in_radarr) {print "    api_key: " radarr_key; next}
+                if (in_sonarr) {print "    api_key: " sonarr_key; next}
+            }
+            {print}
+        ' "${ROOT_DIR}/recyclarr.yml" > /tmp/recyclarr-temp.yml
 
         docker run --rm \
             --network mediacenter \
