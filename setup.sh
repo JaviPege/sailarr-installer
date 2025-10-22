@@ -719,34 +719,100 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     log_operation "DOCKER_COMPOSE" "Starting all services"
     ./up.sh
 
-    # Check if critical services started successfully
+    # Capture docker compose exit code
+    COMPOSE_EXIT_CODE=$?
+
+    if [ $COMPOSE_EXIT_CODE -ne 0 ]; then
+        log_error "Docker Compose failed to start services (exit code: $COMPOSE_EXIT_CODE)"
+        log_error "Check the output above for errors"
+        exit 1
+    fi
+
+    # Validate all services started successfully
     echo ""
-    log_info "Checking critical services..."
+    log_info "Validating all services started correctly..."
 
-    # Check rclone (critical for mounting)
-    if ! docker ps | grep -q "rclone.*Up"; then
-        log_error "Rclone container failed to start!"
-        log_error "This is a critical service. Check logs with: docker logs rclone"
-        log_error "Common issue: rclone.conf should be a FILE not a directory"
+    # Define expected services (exclude optional ones like traefik, rdtclient)
+    EXPECTED_SERVICES=(
+        "zurg"
+        "rclone"
+        "decypharr"
+        "prowlarr"
+        "radarr"
+        "sonarr"
+        "overseerr"
+        "plex"
+        "zilean"
+        "zilean-postgres"
+        "homarr"
+        "dashdot"
+        "autoscan"
+        "tautulli"
+        "watchtower"
+        "plextraktsync"
+        "pinchflat"
+    )
+
+    # Add traefik services if enabled
+    if [ "$TRAEFIK_ENABLED" = true ]; then
+        EXPECTED_SERVICES+=("traefik" "traefik-socket-proxy")
+    fi
+
+    # Count running containers
+    RUNNING_COUNT=$(docker ps --filter "status=running" --format "{{.Names}}" | wc -l)
+    EXPECTED_COUNT=${#EXPECTED_SERVICES[@]}
+
+    log_debug "Expected services: $EXPECTED_COUNT, Running containers: $RUNNING_COUNT"
+
+    # Check if all expected services are running
+    FAILED_SERVICES=()
+    for service in "${EXPECTED_SERVICES[@]}"; do
+        if ! docker ps --format "{{.Names}}" | grep -q "^${service}$"; then
+            FAILED_SERVICES+=("$service")
+        fi
+    done
+
+    # Check for unhealthy containers
+    UNHEALTHY_SERVICES=$(docker ps --filter "health=unhealthy" --format "{{.Names}}" 2>/dev/null || true)
+
+    # Report results
+    if [ ${#FAILED_SERVICES[@]} -gt 0 ]; then
+        log_error "The following services failed to start:"
+        for service in "${FAILED_SERVICES[@]}"; do
+            echo "  - $service"
+            log_debug "Check logs with: docker logs $service"
+        done
         echo ""
-        echo "To fix rclone.conf issue:"
-        echo "  1. docker compose down"
-        echo "  2. rm -rf ${ROOT_DIR}/rclone.conf  # if it's a directory"
-        echo "  3. cp ${SCRIPT_DIR}/config/rclone.conf ${ROOT_DIR}/"
-        echo "  4. ./up.sh"
+        log_error "Installation aborted due to failed services"
+        log_error "Run 'docker compose logs' to see detailed error messages"
         exit 1
     fi
 
-    # Check zurg (critical for Real-Debrid access)
-    if ! docker ps | grep -q "zurg.*Up"; then
-        log_error "Zurg container failed to start!"
-        log_error "Check logs with: docker logs zurg"
-        log_error "Verify your Real-Debrid token is correct in .env.local"
-        exit 1
+    if [ -n "$UNHEALTHY_SERVICES" ]; then
+        log_warning "The following services are unhealthy (may still be starting):"
+        echo "$UNHEALTHY_SERVICES" | while read service; do
+            echo "  - $service"
+        done
+        echo ""
+        log_info "Waiting 60 seconds for services to become healthy..."
+        sleep 60
+
+        # Check again
+        STILL_UNHEALTHY=$(docker ps --filter "health=unhealthy" --format "{{.Names}}" 2>/dev/null || true)
+        if [ -n "$STILL_UNHEALTHY" ]; then
+            log_error "The following services are still unhealthy after waiting:"
+            echo "$STILL_UNHEALTHY" | while read service; do
+                echo "  - $service"
+                echo "  Check logs: docker logs $service"
+            done
+            echo ""
+            log_error "Installation aborted due to unhealthy services"
+            exit 1
+        fi
     fi
 
-    log_success "Critical services (rclone, zurg) started successfully"
-    echo "✓ All services started"
+    log_success "All $EXPECTED_COUNT services started successfully"
+    echo "✓ Service validation passed"
 
     # Function to wait for service to be ready
     wait_for_service() {
