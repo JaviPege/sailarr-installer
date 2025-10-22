@@ -891,16 +891,35 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
         # Configure Radarr authentication if enabled
         if [ "$AUTH_ENABLED" = true ]; then
             echo "  ⟳ Configuring Radarr authentication..."
+
             # Get current config
             CONFIG=$(curl -s "http://localhost:7878/api/v3/config/host" -H "X-Api-Key: $RADARR_API_KEY")
+            if [ -z "$CONFIG" ]; then
+                log_error "Failed to get Radarr config for authentication setup"
+                log_error "Installation aborted - cannot configure authentication"
+                exit 1
+            fi
+
             # Update authentication settings
-            echo "$CONFIG" | jq --arg user "$AUTH_USERNAME" --arg pass "$AUTH_PASSWORD" \
-                '. + {authenticationMethod: "forms", username: $user, password: $pass, passwordConfirmation: $pass, authenticationRequired: "enabled"}' | \
-                curl -s -X PUT "http://localhost:7878/api/v3/config/host" \
+            UPDATED_CONFIG=$(echo "$CONFIG" | jq --arg user "$AUTH_USERNAME" --arg pass "$AUTH_PASSWORD" \
+                '. + {authenticationMethod: "forms", username: $user, password: $pass, passwordConfirmation: $pass, authenticationRequired: "enabled"}')
+
+            # Send update and capture response with HTTP code
+            RESPONSE=$(curl -s -w '\n%{http_code}' -X PUT "http://localhost:7878/api/v3/config/host" \
                 -H "X-Api-Key: $RADARR_API_KEY" \
                 -H "Content-Type: application/json" \
-                -d @- > /dev/null 2>&1
-            echo "  ✓ Radarr authentication configured"
+                -d "$UPDATED_CONFIG")
+
+            HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+
+            if [[ "$HTTP_CODE" =~ ^2 ]]; then
+                echo "  ✓ Radarr authentication configured (HTTP $HTTP_CODE)"
+            else
+                log_error "Failed to configure Radarr authentication (HTTP $HTTP_CODE)"
+                log_error "Response: $(echo "$RESPONSE" | head -n -1)"
+                log_error "Installation aborted - authentication configuration failed"
+                exit 1
+            fi
         fi
 
         # Configure Sonarr
@@ -909,14 +928,35 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
         # Configure Sonarr authentication if enabled
         if [ "$AUTH_ENABLED" = true ]; then
             echo "  ⟳ Configuring Sonarr authentication..."
+
+            # Get current config
             CONFIG=$(curl -s "http://localhost:8989/api/v3/config/host" -H "X-Api-Key: $SONARR_API_KEY")
-            echo "$CONFIG" | jq --arg user "$AUTH_USERNAME" --arg pass "$AUTH_PASSWORD" \
-                '. + {authenticationMethod: "forms", username: $user, password: $pass, passwordConfirmation: $pass, authenticationRequired: "enabled"}' | \
-                curl -s -X PUT "http://localhost:8989/api/v3/config/host" \
+            if [ -z "$CONFIG" ]; then
+                log_error "Failed to get Sonarr config for authentication setup"
+                log_error "Installation aborted - cannot configure authentication"
+                exit 1
+            fi
+
+            # Update authentication settings
+            UPDATED_CONFIG=$(echo "$CONFIG" | jq --arg user "$AUTH_USERNAME" --arg pass "$AUTH_PASSWORD" \
+                '. + {authenticationMethod: "forms", username: $user, password: $pass, passwordConfirmation: $pass, authenticationRequired: "enabled"}')
+
+            # Send update and capture response with HTTP code
+            RESPONSE=$(curl -s -w '\n%{http_code}' -X PUT "http://localhost:8989/api/v3/config/host" \
                 -H "X-Api-Key: $SONARR_API_KEY" \
                 -H "Content-Type: application/json" \
-                -d @- > /dev/null 2>&1
-            echo "  ✓ Sonarr authentication configured"
+                -d "$UPDATED_CONFIG")
+
+            HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+
+            if [[ "$HTTP_CODE" =~ ^2 ]]; then
+                echo "  ✓ Sonarr authentication configured (HTTP $HTTP_CODE)"
+            else
+                log_error "Failed to configure Sonarr authentication (HTTP $HTTP_CODE)"
+                log_error "Response: $(echo "$RESPONSE" | head -n -1)"
+                log_error "Installation aborted - authentication configuration failed"
+                exit 1
+            fi
         fi
 
         # Configure Prowlarr
