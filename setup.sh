@@ -29,8 +29,10 @@ ask_user_input() {
     local required="$5"
     local output_var="$6"
 
-    echo "$title"
-    echo "$(printf '%*s' ${#title} '' | tr ' ' '-')"
+    if [ -n "$title" ]; then
+        echo "$title"
+        echo "$(printf '%*s' ${#title} '' | tr ' ' '-')"
+    fi
 
     if [ -n "$description" ]; then
         echo "$description"
