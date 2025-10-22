@@ -1398,95 +1398,87 @@ if [[ $autoconfig_choice =~ ^[Yy]$ ]]; then
         echo ""
         echo "Configuring Prowlarr..."
 
-        # Add Torrentio indexer
-        curl -s -X POST "http://localhost:9696/api/v1/indexer" \
-            -H "X-Api-Key: $PROWLARR_API_KEY" \
-            -H "Content-Type: application/json" \
-            -d '{
-                "definitionName": "torrentio",
-                "enable": true,
-                "appProfileId": 1,
-                "protocol": "torrent",
-                "priority": 5,
-                "name": "Torrentio",
-                "fields": [
-                    {"order": 0, "name": "definitionFile", "value": "torrentio", "type": "textbox", "advanced": false, "hidden": "hidden", "privacy": "normal", "isFloat": false},
-                    {"order": 1, "name": "baseUrl", "type": "select", "advanced": false, "selectOptionsProviderAction": "getUrls", "privacy": "normal", "isFloat": false},
-                    {"order": 1, "name": "default_opts", "value": "providers=yts,eztv,rarbg,1337x,thepiratebay,kickasstorrents,torrentgalaxy,magnetdl,horriblesubs,nyaasi|sort=qualitysize|qualityfilter=480p,scr,cam", "type": "textbox", "advanced": false, "privacy": "normal", "isFloat": false},
-                    {"order": 3, "name": "debrid_provider_key", "value": "'"$REALDEBRID_TOKEN"'", "type": "textbox", "advanced": false, "privacy": "normal", "isFloat": false},
-                    {"order": 4, "name": "debrid_provider", "value": 5, "type": "select", "advanced": false, "privacy": "normal", "isFloat": false}
-                ],
-                "implementationName": "Cardigann",
-                "implementation": "Cardigann",
-                "configContract": "CardigannSettings",
-                "tags": []
-            }' > /dev/null 2>&1
+        # Add Torrentio indexer using atomic function
+        TORRENTIO_JSON='{
+            "definitionName": "torrentio",
+            "enable": true,
+            "appProfileId": 1,
+            "protocol": "torrent",
+            "priority": 5,
+            "name": "Torrentio",
+            "fields": [
+                {"order": 0, "name": "definitionFile", "value": "torrentio", "type": "textbox", "advanced": false, "hidden": "hidden", "privacy": "normal", "isFloat": false},
+                {"order": 1, "name": "baseUrl", "type": "select", "advanced": false, "selectOptionsProviderAction": "getUrls", "privacy": "normal", "isFloat": false},
+                {"order": 1, "name": "default_opts", "value": "providers=yts,eztv,rarbg,1337x,thepiratebay,kickasstorrents,torrentgalaxy,magnetdl,horriblesubs,nyaasi|sort=qualitysize|qualityfilter=480p,scr,cam", "type": "textbox", "advanced": false, "privacy": "normal", "isFloat": false},
+                {"order": 3, "name": "debrid_provider_key", "value": "'"$REALDEBRID_TOKEN"'", "type": "textbox", "advanced": false, "privacy": "normal", "isFloat": false},
+                {"order": 4, "name": "debrid_provider", "value": 5, "type": "select", "advanced": false, "privacy": "normal", "isFloat": false}
+            ],
+            "implementationName": "Cardigann",
+            "implementation": "Cardigann",
+            "configContract": "CardigannSettings",
+            "tags": []
+        }'
+        api_post_request "http://localhost:9696/api/v1/indexer" "$PROWLARR_API_KEY" "$TORRENTIO_JSON"
         echo "  ✓ Indexer added: Torrentio"
 
-        # Add Zilean indexer (disabled initially until it has indexed DMM data)
-        curl -s -X POST "http://localhost:9696/api/v1/indexer" \
-            -H "X-Api-Key: $PROWLARR_API_KEY" \
-            -H "Content-Type: application/json" \
-            -d '{
-                "definitionName": "zilean",
-                "enable": false,
-                "appProfileId": 1,
-                "protocol": "torrent",
-                "priority": 25,
-                "name": "Zilean",
-                "fields": [
-                    {"order": 0, "name": "definitionFile", "value": "zilean", "type": "textbox", "advanced": false, "hidden": "hidden", "privacy": "normal", "isFloat": false},
-                    {"order": 1, "name": "baseUrl", "value": "http://zilean:8181", "type": "select", "advanced": false, "selectOptionsProviderAction": "getUrls", "privacy": "normal", "isFloat": false}
-                ],
-                "implementationName": "Cardigann",
-                "implementation": "Cardigann",
-                "configContract": "CardigannSettings",
-                "tags": []
-            }' > /dev/null 2>&1
+        # Add Zilean indexer (disabled initially) using atomic function
+        ZILEAN_JSON='{
+            "definitionName": "zilean",
+            "enable": false,
+            "appProfileId": 1,
+            "protocol": "torrent",
+            "priority": 25,
+            "name": "Zilean",
+            "fields": [
+                {"order": 0, "name": "definitionFile", "value": "zilean", "type": "textbox", "advanced": false, "hidden": "hidden", "privacy": "normal", "isFloat": false},
+                {"order": 1, "name": "baseUrl", "value": "http://zilean:8181", "type": "select", "advanced": false, "selectOptionsProviderAction": "getUrls", "privacy": "normal", "isFloat": false}
+            ],
+            "implementationName": "Cardigann",
+            "implementation": "Cardigann",
+            "configContract": "CardigannSettings",
+            "tags": []
+        }'
+        api_post_request "http://localhost:9696/api/v1/indexer" "$PROWLARR_API_KEY" "$ZILEAN_JSON"
         echo "  ✓ Indexer added: Zilean (disabled - enable after DMM data is indexed)"
 
-        # Add The Pirate Bay indexer
-        curl -s -X POST "http://localhost:9696/api/v1/indexer" \
-            -H "X-Api-Key: $PROWLARR_API_KEY" \
-            -H "Content-Type: application/json" \
-            -d '{
-                "definitionName": "thepiratebay",
-                "enable": true,
-                "appProfileId": 1,
-                "protocol": "torrent",
-                "priority": 25,
-                "name": "The Pirate Bay",
-                "fields": [
-                    {"order": 0, "name": "definitionFile", "value": "thepiratebay", "type": "textbox", "advanced": false, "hidden": "hidden", "privacy": "normal", "isFloat": false},
-                    {"order": 1, "name": "baseUrl", "type": "select", "advanced": false, "selectOptionsProviderAction": "getUrls", "privacy": "normal", "isFloat": false}
-                ],
-                "implementationName": "Cardigann",
-                "implementation": "Cardigann",
-                "configContract": "CardigannSettings",
-                "tags": []
-            }' > /dev/null 2>&1
+        # Add The Pirate Bay indexer using atomic function
+        TPB_JSON='{
+            "definitionName": "thepiratebay",
+            "enable": true,
+            "appProfileId": 1,
+            "protocol": "torrent",
+            "priority": 25,
+            "name": "The Pirate Bay",
+            "fields": [
+                {"order": 0, "name": "definitionFile", "value": "thepiratebay", "type": "textbox", "advanced": false, "hidden": "hidden", "privacy": "normal", "isFloat": false},
+                {"order": 1, "name": "baseUrl", "type": "select", "advanced": false, "selectOptionsProviderAction": "getUrls", "privacy": "normal", "isFloat": false}
+            ],
+            "implementationName": "Cardigann",
+            "implementation": "Cardigann",
+            "configContract": "CardigannSettings",
+            "tags": []
+        }'
+        api_post_request "http://localhost:9696/api/v1/indexer" "$PROWLARR_API_KEY" "$TPB_JSON"
         echo "  ✓ Indexer added: The Pirate Bay"
 
-        # Add YTS indexer
-        curl -s -X POST "http://localhost:9696/api/v1/indexer" \
-            -H "X-Api-Key: $PROWLARR_API_KEY" \
-            -H "Content-Type: application/json" \
-            -d '{
-                "definitionName": "yts",
-                "enable": true,
-                "appProfileId": 1,
-                "protocol": "torrent",
-                "priority": 25,
-                "name": "YTS",
-                "fields": [
-                    {"order": 0, "name": "definitionFile", "value": "yts", "type": "textbox", "advanced": false, "hidden": "hidden", "privacy": "normal", "isFloat": false},
-                    {"order": 1, "name": "baseUrl", "type": "select", "advanced": false, "selectOptionsProviderAction": "getUrls", "privacy": "normal", "isFloat": false}
-                ],
-                "implementationName": "Cardigann",
-                "implementation": "Cardigann",
-                "configContract": "CardigannSettings",
-                "tags": []
-            }' > /dev/null 2>&1
+        # Add YTS indexer using atomic function
+        YTS_JSON='{
+            "definitionName": "yts",
+            "enable": true,
+            "appProfileId": 1,
+            "protocol": "torrent",
+            "priority": 25,
+            "name": "YTS",
+            "fields": [
+                {"order": 0, "name": "definitionFile", "value": "yts", "type": "textbox", "advanced": false, "hidden": "hidden", "privacy": "normal", "isFloat": false},
+                {"order": 1, "name": "baseUrl", "type": "select", "advanced": false, "selectOptionsProviderAction": "getUrls", "privacy": "normal", "isFloat": false}
+            ],
+            "implementationName": "Cardigann",
+            "implementation": "Cardigann",
+            "configContract": "CardigannSettings",
+            "tags": []
+        }'
+        api_post_request "http://localhost:9696/api/v1/indexer" "$PROWLARR_API_KEY" "$YTS_JSON"
         echo "  ✓ Indexer added: YTS"
 
         # Add Radarr and Sonarr as applications in Prowlarr
@@ -1500,26 +1492,22 @@ if [[ $autoconfig_choice =~ ^[Yy]$ ]]; then
             exit 1
         fi
 
-        # Trigger indexer sync to all applications
+        # Trigger indexer sync to all applications using atomic functions
         echo ""
         echo "Triggering indexer sync to Radarr and Sonarr..."
-        RADARR_APP_ID=$(curl -s "http://localhost:9696/api/v1/applications" -H "X-Api-Key: $PROWLARR_API_KEY" | jq -r '.[] | select(.name == "Radarr") | .id')
-        SONARR_APP_ID=$(curl -s "http://localhost:9696/api/v1/applications" -H "X-Api-Key: $PROWLARR_API_KEY" | jq -r '.[] | select(.name == "Sonarr") | .id')
 
-        if [ -n "$RADARR_APP_ID" ]; then
-            curl -s -X POST "http://localhost:9696/api/v1/command" \
-                -H "X-Api-Key: $PROWLARR_API_KEY" \
-                -H "Content-Type: application/json" \
-                -d '{"name": "ApplicationIndexerSync", "applicationIds": ['"$RADARR_APP_ID"']}' > /dev/null 2>&1
-            echo "  ✓ Triggered sync to Radarr"
+        # Get Radarr app ID and trigger sync
+        if get_prowlarr_app_id "$PROWLARR_API_KEY" "Radarr" RADARR_APP_ID; then
+            if trigger_prowlarr_sync "$PROWLARR_API_KEY" "$RADARR_APP_ID"; then
+                echo "  ✓ Triggered sync to Radarr"
+            fi
         fi
 
-        if [ -n "$SONARR_APP_ID" ]; then
-            curl -s -X POST "http://localhost:9696/api/v1/command" \
-                -H "X-Api-Key: $PROWLARR_API_KEY" \
-                -H "Content-Type: application/json" \
-                -d '{"name": "ApplicationIndexerSync", "applicationIds": ['"$SONARR_APP_ID"']}' > /dev/null 2>&1
-            echo "  ✓ Triggered sync to Sonarr"
+        # Get Sonarr app ID and trigger sync
+        if get_prowlarr_app_id "$PROWLARR_API_KEY" "Sonarr" SONARR_APP_ID; then
+            if trigger_prowlarr_sync "$PROWLARR_API_KEY" "$SONARR_APP_ID"; then
+                echo "  ✓ Triggered sync to Sonarr"
+            fi
         fi
 
         echo "  ✓ Indexer sync completed"
@@ -1539,31 +1527,10 @@ if [[ $autoconfig_choice =~ ^[Yy]$ ]]; then
         remove_default_profiles "sonarr" 8989 "$SONARR_API_KEY"
         echo ""
 
-        # Run Recyclarr to create TRaSH Guide profiles
+        # Run Recyclarr to create TRaSH Guide profiles using atomic function
         echo "Creating TRaSH Guide quality profiles..."
 
-        # Create temporary recyclarr config with API keys injected
-        # Uses AWK pattern matching instead of hardcoded line numbers for robustness
-        awk -v radarr_key="${RADARR_API_KEY}" -v sonarr_key="${SONARR_API_KEY}" '
-            /^radarr:/ {in_radarr=1; in_sonarr=0}
-            /^sonarr:/ {in_radarr=0; in_sonarr=1}
-            /api_key:$/ {
-                if (in_radarr) {print "    api_key: " radarr_key; next}
-                if (in_sonarr) {print "    api_key: " sonarr_key; next}
-            }
-            {print}
-        ' "${ROOT_DIR}/recyclarr.yml" > /tmp/recyclarr-temp.yml
-
-        docker run --rm \
-            --network mediacenter \
-            -v "/tmp/recyclarr-temp.yml:/config/recyclarr.yml:ro" \
-            ghcr.io/recyclarr/recyclarr:latest \
-            sync
-
-        # Clean up temp file
-        rm -f /tmp/recyclarr-temp.yml
-
-        if [ $? -eq 0 ]; then
+        if run_recyclarr_sync "${ROOT_DIR}/recyclarr.yml" "$RADARR_API_KEY" "$SONARR_API_KEY"; then
             echo ""
             echo "  ✓ Recyclarr configuration completed"
             echo "  ✓ Quality profiles created: Recyclarr-1080p, Recyclarr-2160p, Recyclarr-Any"
@@ -1574,25 +1541,20 @@ if [[ $autoconfig_choice =~ ^[Yy]$ ]]; then
             echo "  You can run it manually later: ./recyclarr-sync.sh"
         fi
 
-        # Configure Prowlarr authentication if enabled
+        # Configure Prowlarr authentication if enabled using atomic function
         if [ "$AUTH_ENABLED" = true ]; then
-            echo ""
-            echo "Configuring Prowlarr authentication..."
-            CONFIG=$(curl -s "http://localhost:9696/api/v1/config/host" -H "X-Api-Key: $PROWLARR_API_KEY")
-            echo "$CONFIG" | jq --arg user "$AUTH_USERNAME" --arg pass "$AUTH_PASSWORD" \
-                '. + {authenticationMethod: "forms", username: $user, password: $pass, passwordConfirmation: $pass, authenticationRequired: "enabled"}' | \
-                curl -s -X PUT "http://localhost:9696/api/v1/config/host" \
-                -H "X-Api-Key: $PROWLARR_API_KEY" \
-                -H "Content-Type: application/json" \
-                -d @- > /dev/null 2>&1
-            echo "  ✓ Authentication configured"
+            if ! configure_arr_authentication "Prowlarr" 9696 "$PROWLARR_API_KEY" "$AUTH_USERNAME" "$AUTH_PASSWORD"; then
+                log_error "Failed to configure Prowlarr authentication (non-critical)"
+            fi
         fi
 
-        echo "" >> "$DOCKER_DIR/.env.install"
-        echo "# API Keys (auto-generated during setup)" >> "$DOCKER_DIR/.env.install"
-        echo "RADARR_API_KEY=$RADARR_API_KEY" >> "$DOCKER_DIR/.env.install"
-        echo "SONARR_API_KEY=$SONARR_API_KEY" >> "$DOCKER_DIR/.env.install"
-        echo "PROWLARR_API_KEY=$PROWLARR_API_KEY" >> "$DOCKER_DIR/.env.install"
+        # Save API keys to .env.install using atomic function
+        API_KEYS_CONTENT="
+# API Keys (auto-generated during setup)
+RADARR_API_KEY=$RADARR_API_KEY
+SONARR_API_KEY=$SONARR_API_KEY
+PROWLARR_API_KEY=$PROWLARR_API_KEY"
+        append_to_file "$DOCKER_DIR/.env.install" "$API_KEYS_CONTENT"
 
         echo ""
         echo "✓ Auto-configuration completed successfully"
@@ -1600,7 +1562,9 @@ if [[ $autoconfig_choice =~ ^[Yy]$ ]]; then
     # Restart all services to ensure everything is running with the new configuration
     echo ""
     echo "Restarting all services with final configuration..."
-    ./up.sh
+    if ! run_docker_compose_up "$DOCKER_DIR"; then
+        log_error "Failed to restart services"
+    fi
     echo "✓ All services running"
 else
     echo "Skipping auto-configuration."
