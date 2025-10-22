@@ -1154,7 +1154,6 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 
         echo ""
         echo "✓ Auto-configuration completed successfully"
-    fi
 
     # Restart all services to ensure everything is running with the new configuration
     echo ""
