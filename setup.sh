@@ -16,6 +16,13 @@ fi
 # Get the directory where this script is located
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
+# Load setup libraries
+LIB_DIR="${SCRIPT_DIR}/setup/lib"
+source "${LIB_DIR}/setup-common.sh"
+source "${LIB_DIR}/setup-users.sh"
+source "${LIB_DIR}/setup-api.sh"
+source "${LIB_DIR}/setup-services.sh"
+
 # Check if .env.install exists - if yes, skip configuration and go straight to install
 if [ -f "$SCRIPT_DIR/docker/.env.install" ]; then
     echo "========================================="
@@ -55,26 +62,6 @@ if [ "$SKIP_CONFIGURATION" = false ]; then
     set -a
     source "$SCRIPT_DIR/docker/.env.defaults"
     set +a
-
-    # Function to find next available UID starting from a base
-    find_available_uid() {
-        local base_uid=$1
-        local uid=$base_uid
-        while getent passwd $uid >/dev/null 2>&1; do
-            ((uid++))
-        done
-        echo $uid
-    }
-
-    # Function to find next available GID starting from a base
-    find_available_gid() {
-        local base_gid=$1
-        local gid=$base_gid
-        while getent group $gid >/dev/null 2>&1; do
-            ((gid++))
-        done
-        echo $gid
-    }
 
     # Ask for installation directory
     echo "Installation Directory"
@@ -405,61 +392,16 @@ if [ ! -d "${ROOT_DIR}" ]; then
     sudo chown $USER:$USER "${ROOT_DIR}"
 fi
 
-# Create group first (needed for directory permissions)
-if getent group mediacenter >/dev/null 2>&1; then
-    echo "✓ Group 'mediacenter' already exists"
-else
-    sudo groupadd mediacenter -g $MEDIACENTER_GID
-    echo "✓ Group 'mediacenter' created (GID: $MEDIACENTER_GID)"
-fi
+# Create users and groups using library function
+setup_mediacenter_users $INSTALL_UID $MEDIACENTER_GID
 
 # Set base directory permissions
 sudo chown -R $INSTALL_UID:mediacenter "${ROOT_DIR}"
 sudo chmod 775 "${ROOT_DIR}"
-echo "✓ Base directory permissions set"
+log_success "Base directory permissions set"
 
-# Function to create user safely
-create_user() {
-    local username=$1
-    local user_uid=$2
-
-    if id "$username" >/dev/null 2>&1; then
-        echo "✓ User '$username' already exists"
-    else
-        sudo useradd $username -u $user_uid
-        echo "✓ User '$username' created (UID: $user_uid)"
-    fi
-}
-
-# Create users
-echo ""
-echo "Creating users..."
-create_user rclone $RCLONE_UID
-create_user sonarr $SONARR_UID
-create_user radarr $RADARR_UID
-create_user recyclarr $RECYCLARR_UID
-create_user prowlarr $PROWLARR_UID
-create_user overseerr $OVERSEERR_UID
-create_user plex $PLEX_UID
-create_user decypharr $DECYPHARR_UID
-create_user autoscan $AUTOSCAN_UID
-create_user pinchflat $PINCHFLAT_UID
-
-# Add users to mediacenter group
-echo ""
-echo "Adding users to mediacenter group..."
-sudo usermod -a -G mediacenter $USER
-sudo usermod -a -G mediacenter rclone
-sudo usermod -a -G mediacenter sonarr
-sudo usermod -a -G mediacenter radarr
-sudo usermod -a -G mediacenter recyclarr
-sudo usermod -a -G mediacenter prowlarr
-sudo usermod -a -G mediacenter overseerr
-sudo usermod -a -G mediacenter plex
-sudo usermod -a -G mediacenter decypharr
-sudo usermod -a -G mediacenter autoscan
-sudo usermod -a -G mediacenter pinchflat
-echo "✓ Users added to mediacenter group"
+# Add current user to mediacenter group
+add_user_to_group $USER mediacenter
 
 # Create directories
 echo ""
@@ -793,72 +735,22 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     # Wait a bit more for config files to be written
     sleep 5
 
-    RADARR_API_KEY=$(grep -oP '<ApiKey>\K[^<]+' ${ROOT_DIR}/config/radarr-config/config.xml 2>/dev/null || echo "")
-    SONARR_API_KEY=$(grep -oP '<ApiKey>\K[^<]+' ${ROOT_DIR}/config/sonarr-config/config.xml 2>/dev/null || echo "")
-    PROWLARR_API_KEY=$(grep -oP '<ApiKey>\K[^<]+' ${ROOT_DIR}/config/prowlarr-config/config.xml 2>/dev/null || echo "")
+    # Extract API keys using library function
+    RADARR_API_KEY=$(extract_api_key "radarr")
+    SONARR_API_KEY=$(extract_api_key "sonarr")
+    PROWLARR_API_KEY=$(extract_api_key "prowlarr")
 
     if [ -z "$RADARR_API_KEY" ] || [ -z "$SONARR_API_KEY" ] || [ -z "$PROWLARR_API_KEY" ]; then
-        echo "✗ Failed to retrieve API keys. Services may not be fully initialized."
+        log_error "Failed to retrieve API keys. Services may not be fully initialized."
         echo "You can configure services manually or run this script again later."
     else
-        echo "✓ API keys retrieved"
+        log_success "API keys retrieved"
         echo "  - Radarr:   $RADARR_API_KEY"
         echo "  - Sonarr:   $SONARR_API_KEY"
         echo "  - Prowlarr: $PROWLARR_API_KEY"
 
         # Configure Radarr
-        echo ""
-        echo "Configuring Radarr..."
-
-        # Add root folder
-        curl -s -X POST "http://localhost:7878/api/v3/rootfolder" \
-            -H "X-Api-Key: $RADARR_API_KEY" \
-            -H "Content-Type: application/json" \
-            -d '{"path":"/data/media/movies"}' > /dev/null 2>&1
-        echo "  ✓ Root folder added: /data/media/movies"
-
-        # Add Decypharr as download client
-        curl -s -X POST "http://localhost:7878/api/v3/downloadclient" \
-            -H "X-Api-Key: $RADARR_API_KEY" \
-            -H "Content-Type: application/json" \
-            -d '{
-                "enable": true,
-                "protocol": "torrent",
-                "priority": 1,
-                "removeCompletedDownloads": true,
-                "removeFailedDownloads": true,
-                "name": "Decypharr",
-                "fields": [
-                    {"name": "host", "value": "decypharr"},
-                    {"name": "port", "value": 8282},
-                    {"name": "useSsl", "value": false},
-                    {"name": "urlBase", "value": ""},
-                    {"name": "username", "value": "http://radarr:7878"},
-                    {"name": "password", "value": "'"$RADARR_API_KEY"'"},
-                    {"name": "movieCategory", "value": "movies"},
-                    {"name": "recentMoviePriority", "value": 0},
-                    {"name": "olderMoviePriority", "value": 0},
-                    {"name": "initialState", "value": 0},
-                    {"name": "sequentialOrder", "value": false},
-                    {"name": "firstAndLast", "value": false}
-                ],
-                "implementationName": "qBittorrent",
-                "implementation": "QBittorrent",
-                "configContract": "QBittorrentSettings",
-                "tags": []
-            }' > /dev/null 2>&1
-        echo "  ✓ Download client added: Decypharr"
-
-        # Add remote path mapping for Decypharr
-        curl -s -X POST "http://localhost:7878/api/v3/remotepathmapping" \
-            -H "X-Api-Key: $RADARR_API_KEY" \
-            -H "Content-Type: application/json" \
-            -d '{
-                "host": "decypharr",
-                "remotePath": "/data/media/radarr",
-                "localPath": "/data/media/movies"
-            }' > /dev/null 2>&1
-        echo "  ✓ Remote path mapping added"
+        RADARR_API_KEY=$(configure_arr_service "radarr" 7878 "movies" "decypharr" 8282 "$RADARR_API_KEY")
 
         # Configure Radarr authentication if enabled
         if [ "$AUTH_ENABLED" = true ]; then
@@ -876,58 +768,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
         fi
 
         # Configure Sonarr
-        echo ""
-        echo "Configuring Sonarr..."
-
-        # Add root folder
-        curl -s -X POST "http://localhost:8989/api/v3/rootfolder" \
-            -H "X-Api-Key: $SONARR_API_KEY" \
-            -H "Content-Type: application/json" \
-            -d '{"path":"/data/media/tv"}' > /dev/null 2>&1
-        echo "  ✓ Root folder added: /data/media/tv"
-
-        # Add Decypharr as download client
-        curl -s -X POST "http://localhost:8989/api/v3/downloadclient" \
-            -H "X-Api-Key: $SONARR_API_KEY" \
-            -H "Content-Type: application/json" \
-            -d '{
-                "enable": true,
-                "protocol": "torrent",
-                "priority": 1,
-                "removeCompletedDownloads": true,
-                "removeFailedDownloads": true,
-                "name": "Decypharr",
-                "fields": [
-                    {"name": "host", "value": "decypharr"},
-                    {"name": "port", "value": 8282},
-                    {"name": "useSsl", "value": false},
-                    {"name": "urlBase", "value": ""},
-                    {"name": "username", "value": "http://sonarr:8989"},
-                    {"name": "password", "value": "'"$SONARR_API_KEY"'"},
-                    {"name": "tvCategory", "value": "tv"},
-                    {"name": "recentTvPriority", "value": 0},
-                    {"name": "olderTvPriority", "value": 0},
-                    {"name": "initialState", "value": 0},
-                    {"name": "sequentialOrder", "value": false},
-                    {"name": "firstAndLast", "value": false}
-                ],
-                "implementationName": "qBittorrent",
-                "implementation": "QBittorrent",
-                "configContract": "QBittorrentSettings",
-                "tags": []
-            }' > /dev/null 2>&1
-        echo "  ✓ Download client added: Decypharr"
-
-        # Add remote path mapping for Decypharr
-        curl -s -X POST "http://localhost:8989/api/v3/remotepathmapping" \
-            -H "X-Api-Key: $SONARR_API_KEY" \
-            -H "Content-Type: application/json" \
-            -d '{
-                "host": "decypharr",
-                "remotePath": "/data/media/sonarr",
-                "localPath": "/data/media/tv"
-            }' > /dev/null 2>&1
-        echo "  ✓ Remote path mapping added"
+        SONARR_API_KEY=$(configure_arr_service "sonarr" 8989 "tv" "decypharr" 8282 "$SONARR_API_KEY")
 
         # Configure Sonarr authentication if enabled
         if [ "$AUTH_ENABLED" = true ]; then
@@ -1037,45 +878,9 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
             }' > /dev/null 2>&1
         echo "  ✓ Indexer added: YTS"
 
-        # Add Radarr as application in Prowlarr (for sync)
-        curl -s -X POST "http://localhost:9696/api/v1/applications" \
-            -H "X-Api-Key: $PROWLARR_API_KEY" \
-            -H "Content-Type: application/json" \
-            -d '{
-                "name": "Radarr",
-                "syncLevel": "fullSync",
-                "implementation": "Radarr",
-                "implementationName": "Radarr",
-                "configContract": "RadarrSettings",
-                "fields": [
-                    {"name": "prowlarrUrl", "value": "http://prowlarr:9696"},
-                    {"name": "baseUrl", "value": "http://radarr:7878"},
-                    {"name": "apiKey", "value": "'"$RADARR_API_KEY"'"},
-                    {"name": "syncCategories", "value": [2000,2010,2020,2030,2040,2045,2050,2060]}
-                ],
-                "tags": []
-            }' > /dev/null 2>&1
-        echo "  ✓ Application added: Radarr (sync enabled)"
-
-        # Add Sonarr as application in Prowlarr (for sync)
-        curl -s -X POST "http://localhost:9696/api/v1/applications" \
-            -H "X-Api-Key: $PROWLARR_API_KEY" \
-            -H "Content-Type: application/json" \
-            -d '{
-                "name": "Sonarr",
-                "syncLevel": "fullSync",
-                "implementation": "Sonarr",
-                "implementationName": "Sonarr",
-                "configContract": "SonarrSettings",
-                "fields": [
-                    {"name": "prowlarrUrl", "value": "http://prowlarr:9696"},
-                    {"name": "baseUrl", "value": "http://sonarr:8989"},
-                    {"name": "apiKey", "value": "'"$SONARR_API_KEY"'"},
-                    {"name": "syncCategories", "value": [5000,5010,5020,5030,5040,5045,5050,5060,5070,5080,5090]}
-                ],
-                "tags": []
-            }' > /dev/null 2>&1
-        echo "  ✓ Application added: Sonarr (sync enabled)"
+        # Add Radarr and Sonarr as applications in Prowlarr
+        add_arr_to_prowlarr "radarr" 7878 "$RADARR_API_KEY" 9696 "$PROWLARR_API_KEY"
+        add_arr_to_prowlarr "sonarr" 8989 "$SONARR_API_KEY" 9696 "$PROWLARR_API_KEY"
 
         # Trigger indexer sync to all applications
         echo ""
@@ -1111,23 +916,9 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
         echo "  • Set up media naming conventions for Plex compatibility"
         echo ""
 
-        # Delete default Radarr quality profiles
-        echo "Removing default Radarr quality profiles..."
-        RADARR_PROFILES=$(curl -s "http://localhost:7878/api/v3/qualityprofile" -H "X-Api-Key: $RADARR_API_KEY")
-        echo "$RADARR_PROFILES" | jq -r '.[].id' | while read profile_id; do
-            curl -s -X DELETE "http://localhost:7878/api/v3/qualityprofile/$profile_id" \
-                -H "X-Api-Key: $RADARR_API_KEY" > /dev/null 2>&1
-        done
-        echo "  ✓ Default Radarr profiles removed"
-
-        # Delete default Sonarr quality profiles
-        echo "Removing default Sonarr quality profiles..."
-        SONARR_PROFILES=$(curl -s "http://localhost:8989/api/v3/qualityprofile" -H "X-Api-Key: $SONARR_API_KEY")
-        echo "$SONARR_PROFILES" | jq -r '.[].id' | while read profile_id; do
-            curl -s -X DELETE "http://localhost:8989/api/v3/qualityprofile/$profile_id" \
-                -H "X-Api-Key: $SONARR_API_KEY" > /dev/null 2>&1
-        done
-        echo "  ✓ Default Sonarr profiles removed"
+        # Delete default quality profiles
+        remove_default_profiles "radarr" 7878 "$RADARR_API_KEY"
+        remove_default_profiles "sonarr" 8989 "$SONARR_API_KEY"
         echo ""
 
         # Run Recyclarr to create TRaSH Guide profiles
