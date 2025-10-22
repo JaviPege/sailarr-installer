@@ -87,6 +87,131 @@ ask_password() {
     eval "$output_var='$user_password'"
 }
 
+# Check if UID is in conflict and return available UID
+# Usage: new_uid=$(check_uid_conflict "username" "desired_uid")
+check_uid_conflict() {
+    local username="$1"
+    local desired_uid="$2"
+
+    # If user already exists, return its current UID
+    if id "$username" >/dev/null 2>&1; then
+        id -u "$username"
+        return 0
+    fi
+
+    # If UID is available, return it
+    if ! getent passwd "$desired_uid" >/dev/null 2>&1; then
+        echo "$desired_uid"
+        return 0
+    fi
+
+    # UID is in conflict, find available one
+    local available_uid=$(find_available_uid "$desired_uid")
+    echo "$available_uid"
+}
+
+# Check if GID is in conflict and return available GID
+# Usage: new_gid=$(check_gid_conflict "groupname" "desired_gid")
+check_gid_conflict() {
+    local groupname="$1"
+    local desired_gid="$2"
+
+    # If group already exists, return its current GID
+    if getent group "$groupname" >/dev/null 2>&1; then
+        getent group "$groupname" | cut -d: -f3
+        return 0
+    fi
+
+    # If GID is available, return it
+    if ! getent group "$desired_gid" >/dev/null 2>&1; then
+        echo "$desired_gid"
+        return 0
+    fi
+
+    # GID is in conflict, find available one
+    local available_gid=$(find_available_gid "$desired_gid")
+    echo "$available_gid"
+}
+
+# Create .env.install configuration file
+create_env_install() {
+    echo "Creating .env.install configuration file..."
+
+    cat > "$SCRIPT_DIR/docker/.env.install" <<EOF
+# =============================================================================
+# MEDIACENTER - INSTALLATION CONFIGURATION
+# Generated on $(date)
+# DO NOT SHARE - Contains secrets and tokens
+# =============================================================================
+
+# =============================================================================
+# USER/ENVIRONMENT SETTINGS
+# =============================================================================
+TIMEZONE=$USER_TIMEZONE
+ROOT_DIR=$INSTALL_DIR
+
+# =============================================================================
+# SECRETS & TOKENS - KEEP PRIVATE
+# =============================================================================
+
+# Plex claim token (valid for 4 minutes after generation)
+# Get from: https://www.plex.tv/claim/
+PLEX_CLAIM=${PLEX_CLAIM:-}
+
+# Real-Debrid API token
+# Get from: https://real-debrid.com/apitoken
+REALDEBRID_TOKEN=$REALDEBRID_TOKEN
+
+# =============================================================================
+# AUTHENTICATION CONFIGURATION
+# =============================================================================
+AUTH_ENABLED=$AUTH_ENABLED
+AUTH_USERNAME=${AUTH_USERNAME:-}
+AUTH_PASSWORD=${AUTH_PASSWORD:-}
+
+# =============================================================================
+# TRAEFIK CONFIGURATION
+# =============================================================================
+TRAEFIK_ENABLED=$TRAEFIK_ENABLED
+
+# =============================================================================
+# DNS/DOMAIN CONFIGURATION
+# =============================================================================
+DOMAIN_NAME=$USER_DOMAIN
+
+# =============================================================================
+# SYSTEM CONFIGURATION - UIDs/GIDs
+# =============================================================================
+MEDIACENTER_GID=$MEDIACENTER_GID
+
+# User IDs
+RCLONE_UID=${RCLONE_UID}
+SONARR_UID=${SONARR_UID}
+RADARR_UID=${RADARR_UID}
+RECYCLARR_UID=${RECYCLARR_UID}
+PROWLARR_UID=${PROWLARR_UID}
+OVERSEERR_UID=${OVERSEERR_UID}
+PLEX_UID=${PLEX_UID}
+DECYPHARR_UID=${DECYPHARR_UID}
+AUTOSCAN_UID=${AUTOSCAN_UID}
+
+# =============================================================================
+# CUSTOM PATHS - Default values
+# =============================================================================
+DOCKER_SOCKET_PATH=/var/run/docker.sock
+HOST_MOUNT_PATH=/
+EOF
+
+    # Reload configuration from .env.install
+    set -a
+    source "$SCRIPT_DIR/docker/.env.defaults"
+    source "$SCRIPT_DIR/docker/.env.install"
+    set +a
+
+    echo "Configuration saved to: $SCRIPT_DIR/docker/.env.install"
+    echo ""
+}
+
 # Check for existing configuration
 check_existing_config() {
     if [ -f "$SCRIPT_DIR/docker/.env.install" ]; then
@@ -260,17 +385,14 @@ If disabled, services will be accessible via their direct ports." \
     echo "Checking for UID/GID conflicts..."
     echo ""
 
-    CONFLICTS_FOUND=false
-    CONFLICT_DETAILS=""
-
-    # Check GID
-    if getent group $MEDIACENTER_GID >/dev/null 2>&1 && ! getent group mediacenter >/dev/null 2>&1; then
-        CONFLICTS_FOUND=true
-        EXISTING_GROUP=$(getent group $MEDIACENTER_GID | cut -d: -f1)
-        CONFLICT_DETAILS="${CONFLICT_DETAILS}  - GID $MEDIACENTER_GID is used by: $EXISTING_GROUP\n"
+    # Check GID for mediacenter group
+    ORIGINAL_GID=$MEDIACENTER_GID
+    MEDIACENTER_GID=$(check_gid_conflict "mediacenter" "$MEDIACENTER_GID")
+    if [ "$MEDIACENTER_GID" != "$ORIGINAL_GID" ]; then
+        echo "  → Assigned GID $MEDIACENTER_GID for mediacenter group (was $ORIGINAL_GID, in use)"
     fi
 
-    # Check UIDs
+    # Check UIDs for all users
     declare -A USERS=(
         ["RCLONE_UID"]="rclone"
         ["SONARR_UID"]="sonarr"
@@ -287,121 +409,20 @@ If disabled, services will be accessible via their direct ports." \
         username="${USERS[$var_name]}"
         uid_value="${!var_name}"
 
-        if getent passwd $uid_value >/dev/null 2>&1 && ! id "$username" >/dev/null 2>&1; then
-            CONFLICTS_FOUND=true
-            EXISTING_USER=$(getent passwd $uid_value | cut -d: -f1)
-            CONFLICT_DETAILS="${CONFLICT_DETAILS}  - UID $uid_value ($var_name for $username) is used by: $EXISTING_USER\n"
+        new_uid=$(check_uid_conflict "$username" "$uid_value")
+
+        if [ "$new_uid" != "$uid_value" ]; then
+            echo "  → Assigned UID $new_uid for $username (was $uid_value, in use)"
+            eval "$var_name=$new_uid"
         fi
     done
 
-    # Handle conflicts - auto-assign available UIDs/GIDs
-    if [ "$CONFLICTS_FOUND" = true ]; then
-        echo "UID/GID Conflicts Detected:"
-        echo -e "$CONFLICT_DETAILS"
-        echo "Auto-assigning available UIDs/GIDs..."
-        echo ""
-
-        # Find and assign GID
-        if getent group $MEDIACENTER_GID >/dev/null 2>&1 && ! getent group mediacenter >/dev/null 2>&1; then
-            ORIGINAL_GID=$MEDIACENTER_GID
-            MEDIACENTER_GID=$(find_available_gid $MEDIACENTER_GID)
-            echo "  → Assigned GID $MEDIACENTER_GID for mediacenter group (was $ORIGINAL_GID, in use)"
-        fi
-
-        # Find and assign UIDs
-        for var_name in "${!USERS[@]}"; do
-            username="${USERS[$var_name]}"
-            uid_value="${!var_name}"
-
-            if getent passwd $uid_value >/dev/null 2>&1 && ! id "$username" >/dev/null 2>&1; then
-                ORIGINAL_UID=$uid_value
-                NEW_UID=$(find_available_uid $uid_value)
-                eval "$var_name=$NEW_UID"
-                echo "  → Assigned UID $NEW_UID for $username (was $ORIGINAL_UID, in use)"
-            fi
-        done
-        echo ""
-    else
-        echo "No UID/GID conflicts detected. Using defaults."
-        echo ""
-    fi
+    echo ""
+    echo "No UID/GID conflicts detected. Using defaults."
+    echo ""
 
     # Create .env.install with all configuration
-    echo "Creating .env.install configuration file..."
-
-    cat > "$SCRIPT_DIR/docker/.env.install" <<EOF
-# =============================================================================
-# MEDIACENTER - INSTALLATION CONFIGURATION
-# Generated on $(date)
-# DO NOT SHARE - Contains secrets and tokens
-# =============================================================================
-
-# =============================================================================
-# USER/ENVIRONMENT SETTINGS
-# =============================================================================
-TIMEZONE=$USER_TIMEZONE
-ROOT_DIR=$INSTALL_DIR
-
-# =============================================================================
-# SECRETS & TOKENS - KEEP PRIVATE
-# =============================================================================
-
-# Plex claim token (valid for 4 minutes after generation)
-# Get from: https://www.plex.tv/claim/
-PLEX_CLAIM=${PLEX_CLAIM:-}
-
-# Real-Debrid API token
-# Get from: https://real-debrid.com/apitoken
-REALDEBRID_TOKEN=$REALDEBRID_TOKEN
-
-# =============================================================================
-# AUTHENTICATION CONFIGURATION
-# =============================================================================
-AUTH_ENABLED=$AUTH_ENABLED
-AUTH_USERNAME=${AUTH_USERNAME:-}
-AUTH_PASSWORD=${AUTH_PASSWORD:-}
-
-# =============================================================================
-# TRAEFIK CONFIGURATION
-# =============================================================================
-TRAEFIK_ENABLED=$TRAEFIK_ENABLED
-
-# =============================================================================
-# DNS/DOMAIN CONFIGURATION
-# =============================================================================
-DOMAIN_NAME=$USER_DOMAIN
-
-# =============================================================================
-# SYSTEM CONFIGURATION - UIDs/GIDs
-# =============================================================================
-MEDIACENTER_GID=$MEDIACENTER_GID
-
-# User IDs
-RCLONE_UID=${RCLONE_UID}
-SONARR_UID=${SONARR_UID}
-RADARR_UID=${RADARR_UID}
-RECYCLARR_UID=${RECYCLARR_UID}
-PROWLARR_UID=${PROWLARR_UID}
-OVERSEERR_UID=${OVERSEERR_UID}
-PLEX_UID=${PLEX_UID}
-DECYPHARR_UID=${DECYPHARR_UID}
-AUTOSCAN_UID=${AUTOSCAN_UID}
-
-# =============================================================================
-# CUSTOM PATHS - Default values
-# =============================================================================
-DOCKER_SOCKET_PATH=/var/run/docker.sock
-HOST_MOUNT_PATH=/
-EOF
-
-    # Reload configuration from .env.install
-    set -a
-    source "$SCRIPT_DIR/docker/.env.defaults"
-    source "$SCRIPT_DIR/docker/.env.install"
-    set +a
-
-    echo "Configuration saved to: $SCRIPT_DIR/docker/.env.install"
-    echo ""
+    create_env_install
 fi
 
 # ========================================
