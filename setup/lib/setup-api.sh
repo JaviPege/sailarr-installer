@@ -27,7 +27,7 @@ api_call() {
 
     # Build curl command
     local curl_cmd="curl -s -w '\n%{http_code}' -X $method '$url' \
-        -H 'X-Api-Key: $api_key' \
+        -H \"X-Api-Key: $api_key\" \
         -H 'Content-Type: application/json'"
 
     # Add data if provided
