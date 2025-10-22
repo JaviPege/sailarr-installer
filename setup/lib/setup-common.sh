@@ -121,6 +121,12 @@ wait_for_service() {
     log_info "Waiting for $service_name to be ready..."
     log_debug "Timeout: ${timeout}s, Port: ${port}, Endpoint: ${endpoint:-none}"
 
+    # Pre-pull curl image if not already present (prevents slow first-run)
+    if ! docker images curlimages/curl:latest --format "{{.Repository}}" 2>/dev/null | grep -q "curlimages/curl"; then
+        log_trace "wait_for_service" "Pulling curlimages/curl image for network checks..."
+        docker pull curlimages/curl:latest >/dev/null 2>&1 || true
+    fi
+
     local elapsed=0
     local interval=5
 
