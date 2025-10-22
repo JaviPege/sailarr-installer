@@ -35,7 +35,7 @@ configure_arr_service() {
 
     # Add download client
     if ! add_download_client "$service_name" "$service_port" "$api_key" \
-        "Decypharr" "$download_client" "$download_port" "$api_key" "$media_type"; then
+        "Decypharr" "$download_client" "$download_port" "$download_api_key" "$media_type"; then
         log_error "Failed to add download client to $service_name"
         log_error "Installation aborted - critical configuration failed"
         exit 1
