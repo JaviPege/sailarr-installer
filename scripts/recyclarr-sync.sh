@@ -42,7 +42,7 @@ echo ""
 # Run Recyclarr with Docker
 docker run --rm \
     --network mediacenter \
-    -v "${SCRIPT_DIR}/recyclarr.yml:/config/recyclarr.yml:ro" \
+    -v "${SCRIPT_DIR}/../config/recyclarr.yml:/config/recyclarr.yml:ro" \
     -e RADARR_API_KEY="${RADARR_API_KEY}" \
     -e SONARR_API_KEY="${SONARR_API_KEY}" \
     ghcr.io/recyclarr/recyclarr:latest \

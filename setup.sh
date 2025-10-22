@@ -440,13 +440,13 @@ if [ "$ROOT_DIR" != "$SCRIPT_DIR" ]; then
     echo "✓ Docker configuration copied to ${ROOT_DIR}/docker"
 
     # Copy rclone.conf
-    sudo cp "$SCRIPT_DIR/rclone.conf" "${ROOT_DIR}/"
+    sudo cp "$SCRIPT_DIR/config/rclone.conf" "${ROOT_DIR}/"
     sudo chown rclone:mediacenter "${ROOT_DIR}/rclone.conf"
     echo "✓ rclone.conf copied to ${ROOT_DIR}/"
 
     # Copy recyclarr configuration
-    sudo cp "$SCRIPT_DIR/recyclarr.yml" "${ROOT_DIR}/"
-    sudo cp "$SCRIPT_DIR/recyclarr-sync.sh" "${ROOT_DIR}/"
+    sudo cp "$SCRIPT_DIR/config/recyclarr.yml" "${ROOT_DIR}/"
+    sudo cp "$SCRIPT_DIR/scripts/recyclarr-sync.sh" "${ROOT_DIR}/"
     sudo chown $INSTALL_UID:mediacenter "${ROOT_DIR}/recyclarr.yml" "${ROOT_DIR}/recyclarr-sync.sh"
     sudo chmod +x "${ROOT_DIR}/recyclarr-sync.sh"
     echo "✓ Recyclarr configuration copied to ${ROOT_DIR}/"
@@ -611,8 +611,8 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     echo "Installing mount healthcheck scripts..."
 
     # Copy healthcheck scripts to /usr/local/bin/
-    sudo cp "$SCRIPT_DIR/arrs-mount-healthcheck.sh" /usr/local/bin/
-    sudo cp "$SCRIPT_DIR/plex-mount-healthcheck.sh" /usr/local/bin/
+    sudo cp "$SCRIPT_DIR/scripts/health/arrs-mount-healthcheck.sh" /usr/local/bin/
+    sudo cp "$SCRIPT_DIR/scripts/health/plex-mount-healthcheck.sh" /usr/local/bin/
 
     # Set permissions
     sudo chmod 775 /usr/local/bin/arrs-mount-healthcheck.sh

@@ -481,7 +481,7 @@ After installation, you can update quality profiles:
 
 ```bash
 cd /mediacenter
-./recyclarr-sync.sh
+./scripts/recyclarr-sync.sh
 ```
 
 ### Add More Indexers
@@ -493,9 +493,9 @@ cd /mediacenter
 
 ### Customize Quality Settings
 
-Edit `/mediacenter/recyclarr.yml` and run:
+Edit `/mediacenter/config/recyclarr.yml` and run:
 ```bash
-./recyclarr-sync.sh
+./scripts/recyclarr-sync.sh
 ```
 
 ### Enable Traefik (Reverse Proxy)
