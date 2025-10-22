@@ -1408,11 +1408,13 @@ if [ "$INSTALL_HEALTHCHECK_FILES" = true ]; then
 
     # Create test file
     if [ -d "${ROOT_DIR}/data/realdebrid-zurg/torrents" ]; then
-        echo "HEALTHCHECK TEST FILE - DO NOT DELETE" | sudo tee ${ROOT_DIR}/data/realdebrid-zurg/torrents/.healthcheck_test.txt > /dev/null
-        sudo chown rclone:mediacenter ${ROOT_DIR}/data/realdebrid-zurg/torrents/.healthcheck_test.txt
+        create_file_from_content \
+            "${ROOT_DIR}/data/realdebrid-zurg/torrents/.healthcheck_test.txt" \
+            "HEALTHCHECK TEST FILE - DO NOT DELETE" \
+            "rclone:mediacenter"
 
         # Create symlink in media directory
-        sudo mkdir -p ${ROOT_DIR}/data/media/.healthcheck
+        create_folder "${ROOT_DIR}/data/media/.healthcheck"
         sudo ln -sf ${ROOT_DIR}/data/realdebrid-zurg/torrents/.healthcheck_test.txt ${ROOT_DIR}/data/media/.healthcheck/test_symlink.txt
 
         echo "✓ Healthcheck test file created"
@@ -1515,20 +1517,19 @@ log_info "Installation completed successfully"
 log_to_file "COMPLETE" "Installation finished at $(date)"
 
 # Ask if user wants to remove the installer repository
-echo ""
-echo "========================================="
-echo "Cleanup"
-echo "========================================="
-echo ""
-echo "The installer repository is no longer needed. All configuration"
-echo "files have been copied to ${ROOT_DIR}."
-echo ""
-echo "Installation directory: $(pwd)"
-echo ""
-read -p "Do you want to remove the installer repository? [y/N]: " -n 1 -r
-echo ""
+REMOVE_INSTALLER=""
+ask_user_input \
+    "Cleanup" \
+    "The installer repository is no longer needed. All configuration
+files have been copied to ${ROOT_DIR}.
 
-if [[ $REPLY =~ ^[Yy]$ ]]; then
+Installation directory: $(pwd)" \
+    "Do you want to remove the installer repository? [y/N]: " \
+    "n" \
+    false \
+    REMOVE_INSTALLER
+
+if [[ "$REMOVE_INSTALLER" =~ ^[Yy]$ ]]; then
     # Use SCRIPT_DIR that was calculated at the start of the script
     # This is more reliable than recalculating from BASH_SOURCE
     log_info "Removing installer repository: ${SCRIPT_DIR}"
