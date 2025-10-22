@@ -38,7 +38,7 @@
         "params": {
           "service": "decypharr",
           "port": 8283,
-          "timeout": 60
+          "timeout": 120
         }
       },
       {
