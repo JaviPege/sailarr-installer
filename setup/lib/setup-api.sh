@@ -100,7 +100,7 @@ add_root_folder() {
         \"name\": \"$name\"
     }"
 
-    if api_call "POST" "$service" "$port" "rootfolder" "$api_key" "$data"; then
+    if api_call "POST" "$service" "$port" "rootfolder" "$api_key" "$data" > /dev/null; then
         log_success "Root folder added to $service"
         return 0
     else
@@ -159,7 +159,7 @@ add_download_client() {
         \"tags\": []
     }"
 
-    if api_call "POST" "$service" "$port" "downloadclient" "$api_key" "$data"; then
+    if api_call "POST" "$service" "$port" "downloadclient" "$api_key" "$data" > /dev/null; then
         log_success "Download client added to $service"
         return 0
     else
@@ -206,7 +206,7 @@ add_arr_to_prowlarr() {
         \"tags\": []
     }"
 
-    if api_call "POST" "prowlarr" "$prowlarr_port" "applications" "$prowlarr_api_key" "$data" "v1"; then
+    if api_call "POST" "prowlarr" "$prowlarr_port" "applications" "$prowlarr_api_key" "$data" "v1" > /dev/null; then
         log_success "${service^} application added to Prowlarr"
         return 0
     else
@@ -232,7 +232,7 @@ add_remote_path_mapping() {
         \"localPath\": \"$local_path\"
     }"
 
-    if api_call "POST" "$service" "$port" "remotepathmapping" "$api_key" "$data"; then
+    if api_call "POST" "$service" "$port" "remotepathmapping" "$api_key" "$data" > /dev/null; then
         log_success "Remote path mapping added to $service"
         return 0
     else
@@ -271,7 +271,7 @@ delete_quality_profile() {
     local api_key=$3
     local profile_id=$4
 
-    api_call "DELETE" "$service" "$port" "qualityprofile/$profile_id" "$api_key"
+    api_call "DELETE" "$service" "$port" "qualityprofile/$profile_id" "$api_key" > /dev/null
 }
 
 # Export functions
