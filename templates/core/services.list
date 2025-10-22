@@ -1,0 +1,23 @@
+# Core Template - Minimal *arr Stack
+# Infrastructure
+networks.yml
+volumes.yml
+
+# Real-Debrid Integration
+zurg.yml
+rclone.yml
+
+# Media Management (*arr Stack)
+radarr.yml
+sonarr.yml
+prowlarr.yml
+
+# Indexers
+zilean.yml
+zilean-postgres.yml
+
+# Download Client
+decypharr.yml
+
+# Library Updates
+autoscan.yml

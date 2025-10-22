@@ -1,0 +1,5 @@
+# Traefik - Reverse Proxy with HTTPS
+# Optional: Standalone
+
+traefik.yml
+traefik-socket-proxy.yml
