@@ -81,6 +81,8 @@ ask_password() {
         done
     fi
 
+    echo ""
+
     # Store in output variable
     eval "$output_var='$user_password'"
 }
