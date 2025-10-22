@@ -854,35 +854,40 @@ echo "========================================="
 echo "This system monitors if containers (Radarr, Sonarr, Decypharr, Plex) can access"
 echo "the rclone mount and automatically restarts them if they lose access."
 echo ""
-read -p "Do you want to install the mount healthcheck auto-repair system? (y/n): " -r
-echo ""
 
-if [[ $REPLY =~ ^[Yy]$ ]]; then
+ask_user_input \
+    "" \
+    "" \
+    "Do you want to install the mount healthcheck auto-repair system? (y/n): " \
+    "" \
+    "false" \
+    "healthcheck_choice"
+
+if [[ $healthcheck_choice =~ ^[Yy]$ ]]; then
     echo "Installing mount healthcheck scripts..."
 
     # Copy healthcheck scripts to /usr/local/bin/
-    sudo cp "$SCRIPT_DIR/scripts/health/arrs-mount-healthcheck.sh" /usr/local/bin/
-    sudo cp "$SCRIPT_DIR/scripts/health/plex-mount-healthcheck.sh" /usr/local/bin/
-
-    # Set permissions
-    sudo chmod 775 /usr/local/bin/arrs-mount-healthcheck.sh
-    sudo chmod 775 /usr/local/bin/plex-mount-healthcheck.sh
-    sudo chown $USER:$USER /usr/local/bin/arrs-mount-healthcheck.sh
-    sudo chown $USER:$USER /usr/local/bin/plex-mount-healthcheck.sh
+    copy_file "$SCRIPT_DIR/scripts/health/arrs-mount-healthcheck.sh" "/usr/local/bin/arrs-mount-healthcheck.sh" "$USER:$USER" "775"
+    copy_file "$SCRIPT_DIR/scripts/health/plex-mount-healthcheck.sh" "/usr/local/bin/plex-mount-healthcheck.sh" "$USER:$USER" "775"
 
     # Create logs directory
-    sudo mkdir -p ${ROOT_DIR}/logs
-    sudo chown $USER:$USER ${ROOT_DIR}/logs
+    create_folder "${ROOT_DIR}/logs" "$USER:$USER" "755"
 
     # Note: Test file will be created after rclone mounts
     INSTALL_HEALTHCHECK_FILES=true
 
     echo "✓ Healthcheck scripts installed successfully"
     echo ""
-    read -p "Do you want to add cron jobs for automatic healthchecks? (y/n): " -r
-    echo ""
 
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
+    ask_user_input \
+        "" \
+        "" \
+        "Do you want to add cron jobs for automatic healthchecks? (y/n): " \
+        "" \
+        "false" \
+        "cron_choice"
+
+    if [[ $cron_choice =~ ^[Yy]$ ]]; then
         # Add cron jobs if they don't already exist
         (crontab -l 2>/dev/null | grep -v "arrs-mount-healthcheck"; echo "*/30 * * * * /usr/local/bin/arrs-mount-healthcheck.sh") | crontab -
         (crontab -l 2>/dev/null | grep -v "plex-mount-healthcheck"; echo "*/35 * * * * /usr/local/bin/plex-mount-healthcheck.sh") | crontab -
@@ -905,10 +910,16 @@ echo "========================================="
 echo "Auto-Configuration via API"
 echo "========================================="
 echo ""
-read -p "Do you want to auto-configure Radarr, Sonarr, and Prowlarr? (y/n): " -r
-echo ""
 
-if [[ $REPLY =~ ^[Yy]$ ]]; then
+ask_user_input \
+    "" \
+    "" \
+    "Do you want to auto-configure Radarr, Sonarr, and Prowlarr? (y/n): " \
+    "" \
+    "false" \
+    "autoconfig_choice"
+
+if [[ $autoconfig_choice =~ ^[Yy]$ ]]; then
     echo "Starting auto-configuration process..."
     echo ""
 
@@ -917,7 +928,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 
     # Generate .env.local from .env.install for docker compose
     echo "Creating .env.local from .env.install..."
-    cp "$DOCKER_DIR/.env.install" "$DOCKER_DIR/.env.local"
+    copy_file "$DOCKER_DIR/.env.install" "$DOCKER_DIR/.env.local"
     echo "✓ .env.local created"
 
     # Start services
