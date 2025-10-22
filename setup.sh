@@ -140,33 +140,33 @@ if [ "$SKIP_CONFIGURATION" = false ]; then
         "INSTALL_DIR"
 
     # Ask for timezone
-    echo "Timezone Configuration"
-    echo "----------------------"
-    echo "Current default: ${TIMEZONE:-Europe/Madrid}"
-    echo "Examples: Europe/Madrid, America/New_York, Asia/Tokyo"
-    read -p "Enter timezone [press Enter for default]: " USER_TIMEZONE
-    USER_TIMEZONE=${USER_TIMEZONE:-${TIMEZONE:-Europe/Madrid}}
-    echo ""
+    ask_user_input \
+        "Timezone Configuration" \
+        "Examples: Europe/Madrid, America/New_York, Asia/Tokyo" \
+        "Enter timezone [press Enter for default]: " \
+        "${TIMEZONE:-Europe/Madrid}" \
+        "false" \
+        "USER_TIMEZONE"
 
     # Ask for Real-Debrid token
-    echo "Real-Debrid API Token"
-    echo "---------------------"
-    echo "Get your API token from: https://real-debrid.com/apitoken"
-    echo "This is required for Zurg and Decypharr to work."
-    read -p "Enter Real-Debrid API token: " REALDEBRID_TOKEN
-    while [ -z "$REALDEBRID_TOKEN" ]; do
-        echo "ERROR: Real-Debrid token is required!"
-        read -p "Enter Real-Debrid API token: " REALDEBRID_TOKEN
-    done
-    echo ""
+    ask_user_input \
+        "Real-Debrid API Token" \
+        "Get your API token from: https://real-debrid.com/apitoken
+This is required for Zurg and Decypharr to work." \
+        "Enter Real-Debrid API token: " \
+        "" \
+        "true" \
+        "REALDEBRID_TOKEN"
 
     # Ask for Plex claim token (optional)
-    echo "Plex Claim Token (Optional)"
-    echo "---------------------------"
-    echo "Get claim token from: https://www.plex.tv/claim/"
-    echo "NOTE: Claim tokens expire in 4 minutes. Leave empty to configure later."
-    read -p "Enter Plex claim token [press Enter to skip]: " PLEX_CLAIM
-    echo ""
+    ask_user_input \
+        "Plex Claim Token (Optional)" \
+        "Get claim token from: https://www.plex.tv/claim/
+NOTE: Claim tokens expire in 4 minutes. Leave empty to configure later." \
+        "Enter Plex claim token [press Enter to skip]: " \
+        "" \
+        "false" \
+        "PLEX_CLAIM"
 
     # Ask for authentication credentials (optional)
     echo "Service Authentication (Optional)"
