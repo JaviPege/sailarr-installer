@@ -879,7 +879,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
         echo "  - Prowlarr: $PROWLARR_API_KEY"
 
         # Configure Radarr
-        RADARR_API_KEY=$(configure_arr_service "radarr" 7878 "movies" "decypharr" 8282 "$RADARR_API_KEY")
+        RADARR_API_KEY=$(configure_arr_service "radarr" 7878 "movies" "decypharr" 8282 "$RADARR_API_KEY" | tail -1)
 
         # Configure Radarr authentication if enabled
         if [ "$AUTH_ENABLED" = true ]; then
@@ -897,7 +897,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
         fi
 
         # Configure Sonarr
-        SONARR_API_KEY=$(configure_arr_service "sonarr" 8989 "tv" "decypharr" 8282 "$SONARR_API_KEY")
+        SONARR_API_KEY=$(configure_arr_service "sonarr" 8989 "tv" "decypharr" 8282 "$SONARR_API_KEY" | tail -1)
 
         # Configure Sonarr authentication if enabled
         if [ "$AUTH_ENABLED" = true ]; then
@@ -1055,8 +1055,8 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 
         # Create temporary recyclarr config with API keys
         cp "${ROOT_DIR}/recyclarr.yml" /tmp/recyclarr-temp.yml
-        sed -i "10s/api_key:.*/api_key: ${RADARR_API_KEY}/" /tmp/recyclarr-temp.yml
-        sed -i "205s/api_key:.*/api_key: ${SONARR_API_KEY}/" /tmp/recyclarr-temp.yml
+        sed -i "10s|api_key:.*|api_key: ${RADARR_API_KEY}|" /tmp/recyclarr-temp.yml
+        sed -i "205s|api_key:.*|api_key: ${SONARR_API_KEY}|" /tmp/recyclarr-temp.yml
 
         docker run --rm \
             --network mediacenter \
