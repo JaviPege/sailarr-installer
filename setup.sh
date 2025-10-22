@@ -81,8 +81,6 @@ ask_password() {
         done
     fi
 
-    echo ""
-
     # Store in output variable
     eval "$output_var='$user_password'"
 }
@@ -344,11 +342,10 @@ Leave empty to skip and configure manually later." \
 
         AUTH_ENABLED=true
         echo "✓ Authentication will be configured"
-        echo ""
     else
         echo "Authentication skipped - configure manually later"
-        echo ""
     fi
+    echo ""
 
     # Ask for Traefik configuration
     ask_user_input \
