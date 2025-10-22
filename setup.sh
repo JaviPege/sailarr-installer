@@ -342,6 +342,241 @@ get_docker_health_status() {
     eval "$output_var='$status'"
 }
 
+# Wait for HTTP service to be ready (atomic, call N times)
+# Usage: wait_for_http_service "service_name" "url" "max_attempts" "sleep_seconds"
+# Returns: 0 if ready, 1 if timeout
+wait_for_http_service() {
+    local service_name="$1"
+    local service_url="$2"
+    local max_attempts="${3:-60}"
+    local sleep_seconds="${4:-2}"
+    local attempt=1
+
+    echo -n "Waiting for $service_name to be ready"
+    while [ $attempt -le $max_attempts ]; do
+        if curl -s -f "$service_url" > /dev/null 2>&1; then
+            echo " ✓"
+            return 0
+        fi
+        echo -n "."
+        sleep $sleep_seconds
+        attempt=$((attempt + 1))
+    done
+    echo " ✗ (timeout)"
+    return 1
+}
+
+# Wait for docker container to be healthy (atomic, call N times)
+# Usage: wait_for_docker_health "container_name" "max_attempts" "sleep_seconds"
+# Returns: 0 if healthy, 1 if timeout
+wait_for_docker_health() {
+    local container_name="$1"
+    local max_attempts="${2:-60}"
+    local sleep_seconds="${3:-2}"
+    local attempt=1
+    local status
+
+    echo -n "Waiting for $container_name to be ready"
+    while [ $attempt -le $max_attempts ]; do
+        status=$(docker inspect -f '{{.State.Health.Status}}' "$container_name" 2>/dev/null || echo "none")
+        if [ "$status" = "healthy" ]; then
+            echo " ✓"
+            return 0
+        fi
+        echo -n "."
+        sleep $sleep_seconds
+        attempt=$((attempt + 1))
+    done
+    echo " ✗ (timeout)"
+    return 1
+}
+
+# Generic GET request with API key (atomic, reusable)
+# Usage: api_get_request "url" "api_key" "output_var"
+# Returns: 0 if success, 1 if failed
+api_get_request() {
+    local url="$1"
+    local api_key="$2"
+    local output_var="$3"
+    local response
+
+    response=$(curl -s "$url" -H "X-Api-Key: $api_key")
+
+    if [ -z "$response" ]; then
+        return 1
+    fi
+
+    eval "$output_var='$response'"
+    return 0
+}
+
+# Generic PUT request with API key and HTTP code validation (atomic, reusable)
+# Usage: api_put_request "url" "api_key" "json_data"
+# Returns: 0 if 2xx, 1 if error
+api_put_request() {
+    local url="$1"
+    local api_key="$2"
+    local json_data="$3"
+    local response
+    local http_code
+
+    response=$(curl -s -w '\n%{http_code}' -X PUT "$url" \
+        -H "X-Api-Key: $api_key" \
+        -H "Content-Type: application/json" \
+        -d "$json_data")
+
+    http_code=$(echo "$response" | tail -n1)
+
+    if [[ "$http_code" =~ ^2 ]]; then
+        return 0
+    else
+        log_error "PUT request failed with HTTP $http_code" >&2
+        return 1
+    fi
+}
+
+# Generic POST request with API key (atomic, reusable)
+# Usage: api_post_request "url" "api_key" "json_data"
+# Returns: 0 if success, 1 if failed
+api_post_request() {
+    local url="$1"
+    local api_key="$2"
+    local json_data="$3"
+
+    if curl -s -X POST "$url" \
+        -H "X-Api-Key: $api_key" \
+        -H "Content-Type: application/json" \
+        -d "$json_data" > /dev/null 2>&1; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+# Configure authentication for *arr service (atomic, call N times)
+# Usage: configure_arr_authentication "service_name" "port" "api_key" "username" "password"
+# Returns: 0 if success, 1 if failed
+configure_arr_authentication() {
+    local service_name="$1"
+    local port="$2"
+    local api_key="$3"
+    local username="$4"
+    local password="$5"
+    local config
+    local updated_config
+
+    echo "  ⟳ Configuring $service_name authentication..." >&2
+
+    # Get current config
+    if ! api_get_request "http://localhost:$port/api/v3/config/host" "$api_key" config; then
+        log_error "Failed to get $service_name config for authentication setup" >&2
+        return 1
+    fi
+
+    if [ -z "$config" ]; then
+        log_error "Failed to get $service_name config for authentication setup" >&2
+        return 1
+    fi
+
+    # Update authentication settings
+    updated_config=$(echo "$config" | jq --arg user "$username" --arg pass "$password" \
+        '. + {authenticationMethod: "forms", username: $user, password: $pass, passwordConfirmation: $pass, authenticationRequired: "enabled"}')
+
+    # Send update
+    if api_put_request "http://localhost:$port/api/v3/config/host" "$api_key" "$updated_config"; then
+        echo "  ✓ $service_name authentication configured" >&2
+        return 0
+    else
+        log_error "Failed to configure $service_name authentication" >&2
+        return 1
+    fi
+}
+
+# Get Prowlarr application ID by name (atomic, call N times)
+# Usage: get_prowlarr_app_id "api_key" "app_name" "output_var"
+# Returns: 0 if found, 1 if not found
+get_prowlarr_app_id() {
+    local api_key="$1"
+    local app_name="$2"
+    local output_var="$3"
+    local apps_json
+    local app_id
+
+    if ! api_get_request "http://localhost:9696/api/v1/applications" "$api_key" apps_json; then
+        return 1
+    fi
+
+    app_id=$(echo "$apps_json" | jq -r ".[] | select(.name == \"$app_name\") | .id")
+
+    if [ -z "$app_id" ] || [ "$app_id" = "null" ]; then
+        return 1
+    fi
+
+    eval "$output_var='$app_id'"
+    return 0
+}
+
+# Trigger Prowlarr indexer sync to ONE application (atomic, call N times)
+# Usage: trigger_prowlarr_sync "api_key" "app_id"
+# Returns: 0 if success, 1 if failed
+trigger_prowlarr_sync() {
+    local api_key="$1"
+    local app_id="$2"
+    local json_payload
+
+    json_payload="{\"name\": \"ApplicationIndexerSync\", \"applicationIds\": [$app_id]}"
+
+    if api_post_request "http://localhost:9696/api/v1/command" "$api_key" "$json_payload"; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+# Run recyclarr sync with API keys injected (atomic, reusable)
+# Usage: run_recyclarr_sync "config_file" "radarr_api_key" "sonarr_api_key"
+# Returns: exit code from docker run
+run_recyclarr_sync() {
+    local config_file="$1"
+    local radarr_key="$2"
+    local sonarr_key="$3"
+    local temp_file="/tmp/recyclarr-temp.yml"
+
+    # Inject API keys using awk
+    awk -v radarr_key="$radarr_key" -v sonarr_key="$sonarr_key" '
+        /^radarr:/ {in_radarr=1; in_sonarr=0}
+        /^sonarr:/ {in_radarr=0; in_sonarr=1}
+        /api_key:$/ {
+            if (in_radarr) {print "    api_key: " radarr_key; next}
+            if (in_sonarr) {print "    api_key: " sonarr_key; next}
+        }
+        {print}
+    ' "$config_file" > "$temp_file"
+
+    # Run recyclarr
+    docker run --rm \
+        --network mediacenter \
+        -v "$temp_file:/config/recyclarr.yml:ro" \
+        ghcr.io/recyclarr/recyclarr:latest \
+        sync
+
+    local exit_code=$?
+
+    # Clean up
+    rm -f "$temp_file"
+
+    return $exit_code
+}
+
+# Append content to file (atomic, reusable)
+# Usage: append_to_file "file_path" "content"
+append_to_file() {
+    local file_path="$1"
+    local content="$2"
+
+    echo "$content" >> "$file_path"
+}
+
 # Show installation summary
 show_installation_summary() {
     echo ""
