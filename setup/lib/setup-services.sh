@@ -193,18 +193,44 @@ remove_default_profiles() {
     local profiles=$(get_quality_profiles "$service" "$port" "$api_key")
 
     if [ -z "$profiles" ]; then
-        log_warning "Failed to get quality profiles from $service"
+        log_error "Failed to get quality profiles from $service"
+        log_error "Installation aborted - cannot remove default profiles"
+        exit 1
+    fi
+
+    # Extract profile IDs into array (avoids subshell issues with while read)
+    local profile_ids=($(echo "$profiles" | jq -r '.[].id' 2>/dev/null))
+
+    if [ ${#profile_ids[@]} -eq 0 ]; then
+        log_warning "No quality profiles found in $service (may have been removed already)"
         return 0
     fi
 
+    log_debug "Found ${#profile_ids[@]} quality profiles to remove"
+
     # Delete each profile
-    echo "$profiles" | jq -r '.[].id' 2>/dev/null | while read profile_id; do
+    local deleted_count=0
+    local failed_count=0
+
+    for profile_id in "${profile_ids[@]}"; do
         if [ -n "$profile_id" ]; then
-            delete_quality_profile "$service" "$port" "$api_key" "$profile_id" 2>/dev/null
+            log_debug "Deleting profile ID $profile_id from $service"
+            if delete_quality_profile "$service" "$port" "$api_key" "$profile_id"; then
+                ((deleted_count++))
+            else
+                log_warning "Failed to delete profile ID $profile_id from $service (may be in use)"
+                ((failed_count++))
+            fi
         fi
     done
 
-    log_success "Default quality profiles removed from $service"
+    if [ $deleted_count -gt 0 ]; then
+        log_success "Removed $deleted_count quality profile(s) from $service"
+    fi
+
+    if [ $failed_count -gt 0 ]; then
+        log_warning "$failed_count profile(s) could not be deleted (may be assigned to content)"
+    fi
 }
 
 # Export functions
