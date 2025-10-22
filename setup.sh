@@ -1212,7 +1212,6 @@ if [[ $autoconfig_choice =~ ^[Yy]$ ]]; then
     # Start services
     echo ""
     echo "Starting Docker services (this may take a few minutes)..."
-    cd "$DOCKER_DIR"
 
     if [ "$TRAEFIK_ENABLED" = true ]; then
         echo "Traefik enabled - starting with reverse proxy..."
@@ -1220,15 +1219,9 @@ if [[ $autoconfig_choice =~ ^[Yy]$ ]]; then
         echo "Traefik disabled - using direct port access..."
     fi
 
-    # Start all services (up.sh will handle Traefik profile automatically based on .env.local)
+    # Start all services using atomic function
     log_operation "DOCKER_COMPOSE" "Starting all services"
-    ./up.sh
-
-    # Capture docker compose exit code
-    COMPOSE_EXIT_CODE=$?
-
-    if [ $COMPOSE_EXIT_CODE -ne 0 ]; then
-        log_error "Docker Compose failed to start services (exit code: $COMPOSE_EXIT_CODE)"
+    if ! run_docker_compose_up "$DOCKER_DIR"; then
         log_error "Check the output above for errors"
         exit 1
     fi
@@ -1263,24 +1256,20 @@ if [[ $autoconfig_choice =~ ^[Yy]$ ]]; then
         EXPECTED_SERVICES+=("traefik" "traefik-socket-proxy")
     fi
 
-    # Count running containers
-    RUNNING_COUNT=$(docker ps --filter "status=running" --format "{{.Names}}" | wc -l)
+    # Count expected services
     EXPECTED_COUNT=${#EXPECTED_SERVICES[@]}
-
+    RUNNING_COUNT=$(docker ps --filter "status=running" --format "{{.Names}}" | wc -l)
     log_debug "Expected services: $EXPECTED_COUNT, Running containers: $RUNNING_COUNT"
 
-    # Check if all expected services are running
+    # Check if all expected services are running using atomic function
     FAILED_SERVICES=()
     for service in "${EXPECTED_SERVICES[@]}"; do
-        if ! docker ps --format "{{.Names}}" | grep -q "^${service}$"; then
+        if ! validate_docker_service "$service"; then
             FAILED_SERVICES+=("$service")
         fi
     done
 
-    # Check for unhealthy containers
-    UNHEALTHY_SERVICES=$(docker ps --filter "health=unhealthy" --format "{{.Names}}" 2>/dev/null || true)
-
-    # Report results
+    # Report failed services
     if [ ${#FAILED_SERVICES[@]} -gt 0 ]; then
         log_error "The following services failed to start:"
         for service in "${FAILED_SERVICES[@]}"; do
@@ -1293,9 +1282,20 @@ if [[ $autoconfig_choice =~ ^[Yy]$ ]]; then
         exit 1
     fi
 
-    if [ -n "$UNHEALTHY_SERVICES" ]; then
+    # Check for unhealthy containers using atomic function
+    UNHEALTHY_SERVICES=()
+    for service in "${EXPECTED_SERVICES[@]}"; do
+        local status
+        get_docker_health_status "$service" status
+        if [ "$status" = "unhealthy" ]; then
+            UNHEALTHY_SERVICES+=("$service")
+        fi
+    done
+
+    # Handle unhealthy services
+    if [ ${#UNHEALTHY_SERVICES[@]} -gt 0 ]; then
         log_warning "The following services are unhealthy (may still be starting):"
-        echo "$UNHEALTHY_SERVICES" | while read service; do
+        for service in "${UNHEALTHY_SERVICES[@]}"; do
             echo "  - $service"
         done
         echo ""
@@ -1303,10 +1303,18 @@ if [[ $autoconfig_choice =~ ^[Yy]$ ]]; then
         sleep 60
 
         # Check again
-        STILL_UNHEALTHY=$(docker ps --filter "health=unhealthy" --format "{{.Names}}" 2>/dev/null || true)
-        if [ -n "$STILL_UNHEALTHY" ]; then
+        STILL_UNHEALTHY=()
+        for service in "${UNHEALTHY_SERVICES[@]}"; do
+            local status
+            get_docker_health_status "$service" status
+            if [ "$status" = "unhealthy" ]; then
+                STILL_UNHEALTHY+=("$service")
+            fi
+        done
+
+        if [ ${#STILL_UNHEALTHY[@]} -gt 0 ]; then
             log_error "The following services are still unhealthy after waiting:"
-            echo "$STILL_UNHEALTHY" | while read service; do
+            for service in "${STILL_UNHEALTHY[@]}"; do
                 echo "  - $service"
                 echo "  Check logs: docker logs $service"
             done
@@ -1319,48 +1327,22 @@ if [[ $autoconfig_choice =~ ^[Yy]$ ]]; then
     log_success "All $EXPECTED_COUNT services started successfully"
     echo "✓ Service validation passed"
 
-    # Function to wait for service to be ready
-    wait_for_service() {
-        local service_name=$1
-        local service_url=$2
-        local max_attempts=60
-        local attempt=1
-
-        echo -n "Waiting for $service_name to be ready"
-        while [ $attempt -le $max_attempts ]; do
-            if curl -s -f "$service_url" > /dev/null 2>&1; then
-                echo " ✓"
-                return 0
-            fi
-            echo -n "."
-            sleep 2
-            ((attempt++))
-        done
-        echo " ✗ (timeout)"
-        return 1
-    }
-
     # Wait for services to be ready
     echo ""
 
     if [ "$TRAEFIK_ENABLED" = true ]; then
-        wait_for_service "Traefik" "http://localhost:8080/api/version"
+        wait_for_http_service "Traefik" "http://localhost:8080/api/version" 60 2
     fi
 
-    wait_for_service "Radarr" "http://localhost:7878"
-    wait_for_service "Sonarr" "http://localhost:8989"
-    wait_for_service "Prowlarr" "http://localhost:9696"
+    wait_for_http_service "Radarr" "http://localhost:7878" 60 2
+    wait_for_http_service "Sonarr" "http://localhost:8989" 60 2
+    wait_for_http_service "Prowlarr" "http://localhost:9696" 60 2
 
     # Skip Zilean wait - it can take 10-30 minutes to import DMM data on first run
     echo "Zilean starting in background (will import DMM data, can take 10-30 minutes)"
 
-    # Decypharr doesn't have HTTP API, just verify container is healthy
-    echo -n "Waiting for Decypharr to be ready"
-    while [ "$(docker inspect -f '{{.State.Health.Status}}' decypharr 2>/dev/null)" != "healthy" ]; do
-        echo -n "."
-        sleep 2
-    done
-    echo " ✓"
+    # Decypharr doesn't have HTTP API, use docker health check
+    wait_for_docker_health "decypharr" 60 2
 
     # Get API keys from config files
     echo ""
@@ -1393,35 +1375,9 @@ if [[ $autoconfig_choice =~ ^[Yy]$ ]]; then
         # Configure Radarr
         RADARR_API_KEY=$(configure_arr_service "radarr" 7878 "movies" "decypharr" 8282 "$RADARR_API_KEY" | tail -1)
 
-        # Configure Radarr authentication if enabled
+        # Configure Radarr authentication if enabled using atomic function
         if [ "$AUTH_ENABLED" = true ]; then
-            echo "  ⟳ Configuring Radarr authentication..."
-
-            # Get current config
-            CONFIG=$(curl -s "http://localhost:7878/api/v3/config/host" -H "X-Api-Key: $RADARR_API_KEY")
-            if [ -z "$CONFIG" ]; then
-                log_error "Failed to get Radarr config for authentication setup"
-                log_error "Installation aborted - cannot configure authentication"
-                exit 1
-            fi
-
-            # Update authentication settings
-            UPDATED_CONFIG=$(echo "$CONFIG" | jq --arg user "$AUTH_USERNAME" --arg pass "$AUTH_PASSWORD" \
-                '. + {authenticationMethod: "forms", username: $user, password: $pass, passwordConfirmation: $pass, authenticationRequired: "enabled"}')
-
-            # Send update and capture response with HTTP code
-            RESPONSE=$(curl -s -w '\n%{http_code}' -X PUT "http://localhost:7878/api/v3/config/host" \
-                -H "X-Api-Key: $RADARR_API_KEY" \
-                -H "Content-Type: application/json" \
-                -d "$UPDATED_CONFIG")
-
-            HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
-
-            if [[ "$HTTP_CODE" =~ ^2 ]]; then
-                echo "  ✓ Radarr authentication configured (HTTP $HTTP_CODE)"
-            else
-                log_error "Failed to configure Radarr authentication (HTTP $HTTP_CODE)"
-                log_error "Response: $(echo "$RESPONSE" | head -n -1)"
+            if ! configure_arr_authentication "Radarr" 7878 "$RADARR_API_KEY" "$AUTH_USERNAME" "$AUTH_PASSWORD"; then
                 log_error "Installation aborted - authentication configuration failed"
                 exit 1
             fi
@@ -1430,35 +1386,9 @@ if [[ $autoconfig_choice =~ ^[Yy]$ ]]; then
         # Configure Sonarr
         SONARR_API_KEY=$(configure_arr_service "sonarr" 8989 "tv" "decypharr" 8282 "$SONARR_API_KEY" | tail -1)
 
-        # Configure Sonarr authentication if enabled
+        # Configure Sonarr authentication if enabled using atomic function
         if [ "$AUTH_ENABLED" = true ]; then
-            echo "  ⟳ Configuring Sonarr authentication..."
-
-            # Get current config
-            CONFIG=$(curl -s "http://localhost:8989/api/v3/config/host" -H "X-Api-Key: $SONARR_API_KEY")
-            if [ -z "$CONFIG" ]; then
-                log_error "Failed to get Sonarr config for authentication setup"
-                log_error "Installation aborted - cannot configure authentication"
-                exit 1
-            fi
-
-            # Update authentication settings
-            UPDATED_CONFIG=$(echo "$CONFIG" | jq --arg user "$AUTH_USERNAME" --arg pass "$AUTH_PASSWORD" \
-                '. + {authenticationMethod: "forms", username: $user, password: $pass, passwordConfirmation: $pass, authenticationRequired: "enabled"}')
-
-            # Send update and capture response with HTTP code
-            RESPONSE=$(curl -s -w '\n%{http_code}' -X PUT "http://localhost:8989/api/v3/config/host" \
-                -H "X-Api-Key: $SONARR_API_KEY" \
-                -H "Content-Type: application/json" \
-                -d "$UPDATED_CONFIG")
-
-            HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
-
-            if [[ "$HTTP_CODE" =~ ^2 ]]; then
-                echo "  ✓ Sonarr authentication configured (HTTP $HTTP_CODE)"
-            else
-                log_error "Failed to configure Sonarr authentication (HTTP $HTTP_CODE)"
-                log_error "Response: $(echo "$RESPONSE" | head -n -1)"
+            if ! configure_arr_authentication "Sonarr" 8989 "$SONARR_API_KEY" "$AUTH_USERNAME" "$AUTH_PASSWORD"; then
                 log_error "Installation aborted - authentication configuration failed"
                 exit 1
             fi
