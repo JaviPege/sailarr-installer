@@ -121,31 +121,17 @@ wait_for_service() {
     log_info "Waiting for $service_name to be ready..."
     log_debug "Timeout: ${timeout}s, Port: ${port}, Endpoint: ${endpoint:-none}"
 
-    # Pre-pull curl image if not already present (prevents slow first-run)
-    if ! docker images curlimages/curl:latest --format "{{.Repository}}" 2>/dev/null | grep -q "curlimages/curl"; then
-        log_trace "wait_for_service" "Pulling curlimages/curl image for network checks..."
-        docker pull curlimages/curl:latest >/dev/null 2>&1 || true
-    fi
-
     local elapsed=0
-    local interval=5
+    local interval=2
 
     while [ $elapsed -lt $timeout ]; do
         log_trace "wait_for_service" "Checking health of $service_name (elapsed: ${elapsed}s)"
 
-        if docker ps --filter "name=$service_name" --filter "health=healthy" --format "{{.Names}}" | grep -q "$service_name"; then
-            # Container is healthy, now verify port is actually accessible from Docker network
-            log_trace "wait_for_service" "Container healthy, verifying port ${port} is accessible"
-
-            # Use docker exec to curl from inside a container in the same network
-            # This tests connectivity as services will experience it
-            if docker run --rm --network mediacenter curlimages/curl:latest -sf -o /dev/null --connect-timeout 2 --max-time 5 "http://${service_name}:${port}${endpoint}" 2>/dev/null; then
-                log_success "$service_name is healthy and port ${port} is accessible"
-                log_function_exit "wait_for_service" 0 "ready after ${elapsed}s"
-                return 0
-            else
-                log_trace "wait_for_service" "Port ${port} not yet accessible from Docker network, waiting..."
-            fi
+        # Check if container is healthy using docker inspect (same as original setup.sh)
+        if [ "$(docker inspect -f '{{.State.Health.Status}}' "$service_name" 2>/dev/null)" = "healthy" ]; then
+            log_success "$service_name is healthy"
+            log_function_exit "wait_for_service" 0 "healthy after ${elapsed}s"
+            return 0
         fi
 
         sleep $interval
