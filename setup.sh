@@ -450,9 +450,29 @@ if [ "$ROOT_DIR" != "$SCRIPT_DIR" ]; then
 
     # Copy rclone.conf
     log_operation "COPY" "rclone.conf to ${ROOT_DIR}/"
+
+    # Verify source is a file
+    if [ ! -f "$SCRIPT_DIR/config/rclone.conf" ]; then
+        log_error "Source rclone.conf is not a file: $SCRIPT_DIR/config/rclone.conf"
+        exit 1
+    fi
+
+    # Remove destination if it's a directory
+    if [ -d "${ROOT_DIR}/rclone.conf" ]; then
+        log_warning "Destination rclone.conf is a directory, removing it"
+        sudo rm -rf "${ROOT_DIR}/rclone.conf"
+    fi
+
     sudo cp "$SCRIPT_DIR/config/rclone.conf" "${ROOT_DIR}/"
     sudo chown rclone:mediacenter "${ROOT_DIR}/rclone.conf"
-    echo "✓ rclone.conf copied to ${ROOT_DIR}/"
+
+    # Verify it was copied as a file
+    if [ ! -f "${ROOT_DIR}/rclone.conf" ]; then
+        log_error "Failed to copy rclone.conf as a file to ${ROOT_DIR}/"
+        exit 1
+    fi
+
+    log_success "rclone.conf copied successfully"
 
     # Copy recyclarr configuration
     log_operation "COPY" "recyclarr.yml and recyclarr-sync.sh to ${ROOT_DIR}/"
@@ -695,8 +715,37 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     fi
 
     # Start all services (up.sh will handle Traefik profile automatically based on .env.local)
+    log_operation "DOCKER_COMPOSE" "Starting all services"
     ./up.sh
-    echo "✓ Services started"
+
+    # Check if critical services started successfully
+    echo ""
+    log_info "Checking critical services..."
+
+    # Check rclone (critical for mounting)
+    if ! docker ps | grep -q "rclone.*Up"; then
+        log_error "Rclone container failed to start!"
+        log_error "This is a critical service. Check logs with: docker logs rclone"
+        log_error "Common issue: rclone.conf should be a FILE not a directory"
+        echo ""
+        echo "To fix rclone.conf issue:"
+        echo "  1. docker compose down"
+        echo "  2. rm -rf ${ROOT_DIR}/rclone.conf  # if it's a directory"
+        echo "  3. cp ${SCRIPT_DIR}/config/rclone.conf ${ROOT_DIR}/"
+        echo "  4. ./up.sh"
+        exit 1
+    fi
+
+    # Check zurg (critical for Real-Debrid access)
+    if ! docker ps | grep -q "zurg.*Up"; then
+        log_error "Zurg container failed to start!"
+        log_error "Check logs with: docker logs zurg"
+        log_error "Verify your Real-Debrid token is correct in .env.local"
+        exit 1
+    fi
+
+    log_success "Critical services (rclone, zurg) started successfully"
+    echo "✓ All services started"
 
     # Function to wait for service to be ready
     wait_for_service() {
