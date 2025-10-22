@@ -299,6 +299,49 @@ create_file_from_content() {
     fi
 }
 
+# Run docker compose up with validation (atomic, reusable)
+# Usage: run_docker_compose_up "/path/to/docker/dir"
+# Returns: 0 if success, 1 if failed
+run_docker_compose_up() {
+    local compose_dir="$1"
+
+    cd "$compose_dir" || return 1
+    ./up.sh
+    local exit_code=$?
+
+    if [ $exit_code -ne 0 ]; then
+        log_error "Docker Compose failed to start services (exit code: $exit_code)" >&2
+        return 1
+    fi
+
+    return 0
+}
+
+# Validate that ONE docker service is running (atomic, call N times)
+# Usage: validate_docker_service "service_name"
+# Returns: 0 if running, 1 if not running
+validate_docker_service() {
+    local service_name="$1"
+
+    if docker ps --format "{{.Names}}" | grep -q "^${service_name}$"; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+# Get docker container health status (atomic, call N times)
+# Usage: get_docker_health_status "container_name" "output_var"
+get_docker_health_status() {
+    local container_name="$1"
+    local output_var="$2"
+    local status
+
+    status=$(docker inspect -f '{{.State.Health.Status}}' "$container_name" 2>/dev/null || echo "none")
+
+    eval "$output_var='$status'"
+}
+
 # Show installation summary
 show_installation_summary() {
     echo ""
