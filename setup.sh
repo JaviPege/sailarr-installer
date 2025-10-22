@@ -315,7 +315,7 @@ DOMAIN_NAME=$USER_DOMAIN
 # =============================================================================
 # TEMPLATE SELECTION
 # =============================================================================
-SELECTED_TEMPLATES=$SELECTED_TEMPLATES
+SELECTED_TEMPLATES="$SELECTED_TEMPLATES"
 
 # =============================================================================
 # SYSTEM CONFIGURATION - UIDs/GIDs
