@@ -250,7 +250,21 @@ get_quality_profiles() {
     local port=$2
     local api_key=$3
 
-    api_call "GET" "$service" "$port" "qualityprofile" "$api_key"
+    # Call API directly without logging to avoid stdout pollution
+    # (api_call logs contaminate the JSON output making it unparseable)
+    local response=$(curl -s -w '\n%{http_code}' -X GET "http://localhost:${port}/api/v3/qualityprofile" \
+        -H "X-Api-Key: $api_key" \
+        -H 'Content-Type: application/json')
+
+    local http_code=$(echo "$response" | tail -n1)
+    local body=$(echo "$response" | sed '$d')
+
+    if [[ "$http_code" =~ ^2 ]]; then
+        echo "$body"
+        return 0
+    else
+        return 1
+    fi
 }
 
 # Delete quality profile
