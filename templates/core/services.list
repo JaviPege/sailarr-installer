@@ -1,23 +1,30 @@
-# Core Template - Minimal *arr Stack
-# Infrastructure
-networks.yml
-volumes.yml
+# Core Template - Service deployment order
+# Each line is a service name that maps to:
+#   - templates/services/{service}.json for configuration
+#   - docker/compose-services/{service}.yml for deployment
 
-# Real-Debrid Integration
-zurg.yml
-rclone.yml
+# Infrastructure (no setup needed, just deploy)
+networks
+volumes
+
+# Real-Debrid Integration (no setup needed)
+zurg
+rclone
 
 # Media Management (*arr Stack)
-radarr.yml
-sonarr.yml
-prowlarr.yml
+radarr
+sonarr
+prowlarr
 
 # Indexers
-zilean.yml
-zilean-postgres.yml
+zilean-postgres
+zilean
 
 # Download Client
-decypharr.yml
+decypharr
 
 # Library Updates
-autoscan.yml
+autoscan
+
+# Quality Profiles (runs after *arr services are configured)
+recyclarr

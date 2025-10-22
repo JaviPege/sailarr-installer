@@ -1,0 +1,32 @@
+{
+  "service": "traefik",
+  "description": "Traefik - Reverse Proxy with HTTPS",
+  "compose_file": "traefik.yml",
+  "setup": {
+    "steps": [
+      {
+        "action": "wait_for_service",
+        "description": "Waiting for Traefik to be ready",
+        "params": {
+          "service": "traefik",
+          "port": 8080,
+          "timeout": 60
+        }
+      },
+      {
+        "action": "log_success",
+        "description": "Display Traefik information",
+        "params": {
+          "message": "Traefik is ready!\nDashboard: http://localhost:8080\nHTTP: http://localhost:80\nHTTPS: https://localhost:443"
+        }
+      },
+      {
+        "action": "log_warning",
+        "description": "Display SSL certificate warning",
+        "params": {
+          "message": "Configure your domain and email in traefik.yml for Let's Encrypt certificates"
+        }
+      }
+    ]
+  }
+}

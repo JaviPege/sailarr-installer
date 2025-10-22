@@ -1,0 +1,32 @@
+{
+  "service": "plex",
+  "description": "Plex Media Server",
+  "compose_file": "plex.yml",
+  "setup": {
+    "steps": [
+      {
+        "action": "wait_for_service",
+        "description": "Waiting for Plex to be ready",
+        "params": {
+          "service": "plex",
+          "port": 32400,
+          "timeout": 120
+        }
+      },
+      {
+        "action": "log_info",
+        "description": "Plex access info",
+        "params": {
+          "message": "Plex Media Server: http://${SERVER_IP}:32400/web"
+        }
+      },
+      {
+        "action": "log_info",
+        "description": "Plex library setup",
+        "params": {
+          "message": "Add libraries:\n   • Movies: /data/media/movies\n   • TV Shows: /data/media/tv"
+        }
+      }
+    ]
+  }
+}

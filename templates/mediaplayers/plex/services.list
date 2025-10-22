@@ -1,5 +1,3 @@
-# Plex Template - Extends Core + Plex Media Server
-# Inherits: core
-
+# Plex Template - Extends Core
 # Media Server
-plex.yml
+plex

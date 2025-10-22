@@ -1,5 +1,3 @@
-# Overseerr Template - Extends Plex + Request Management
-# Inherits: core, plex
-
+# Overseerr Template - Extends Plex
 # Request Management
-overseerr.yml
+overseerr

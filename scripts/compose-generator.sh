@@ -120,7 +120,20 @@ collect_services() {
         # Trim whitespace
         service=$(echo "$service" | xargs)
 
-        echo "$service"
+        # Map service name to compose file
+        # Try to load service JSON to get compose_file, otherwise use service.yml
+        local service_json="${TEMPLATES_DIR}/../templates/services/${service}.json"
+        if [ -f "$service_json" ]; then
+            local compose_file=$(jq -r '.compose_file // empty' "$service_json" 2>/dev/null)
+            # Skip if compose_file is explicitly null or "null" string
+            if [ "$compose_file" = "null" ] || [ -z "$compose_file" ]; then
+                # Service has no compose file (like recyclarr) - skip silently
+                continue
+            fi
+            echo "$compose_file"
+        else
+            echo "${service}.yml"
+        fi
     done < "${services_file}"
 }
 

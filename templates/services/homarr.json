@@ -1,0 +1,25 @@
+{
+  "service": "homarr",
+  "description": "Homarr - Service Dashboard",
+  "compose_file": "homarr.yml",
+  "setup": {
+    "steps": [
+      {
+        "action": "wait_for_service",
+        "description": "Waiting for Homarr to be ready",
+        "params": {
+          "service": "homarr",
+          "port": 7575,
+          "timeout": 60
+        }
+      },
+      {
+        "action": "log_success",
+        "description": "Display Homarr information",
+        "params": {
+          "message": "Homarr dashboard is ready at http://localhost:7575"
+        }
+      }
+    ]
+  }
+}

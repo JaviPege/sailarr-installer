@@ -1,0 +1,25 @@
+{
+  "service": "autoscan",
+  "description": "Autoscan - Plex Library Scanner",
+  "compose_file": "autoscan.yml",
+  "setup": {
+    "steps": [
+      {
+        "action": "wait_for_service",
+        "description": "Waiting for Autoscan to be ready",
+        "params": {
+          "service": "autoscan",
+          "port": 3030,
+          "timeout": 60
+        }
+      },
+      {
+        "action": "log_success",
+        "description": "Display Autoscan information",
+        "params": {
+          "message": "Autoscan is ready to trigger Plex library updates"
+        }
+      }
+    ]
+  }
+}

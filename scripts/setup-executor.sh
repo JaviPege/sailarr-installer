@@ -157,45 +157,75 @@ execute_step() {
     esac
 }
 
-# Execute setup for a template
-execute_template_setup() {
-    local template=$1
-    local setup_file="${TEMPLATES_DIR}/${template}/setup.json"
+# Execute setup for a single service
+execute_service_setup() {
+    local service=$1
+    local service_json="${TEMPLATES_DIR}/../templates/services/${service}.json"
 
-    if [ ! -f "$setup_file" ]; then
-        log_info "No setup configuration for template: $template"
+    # If no JSON file exists, skip (service doesn't need configuration)
+    if [ ! -f "$service_json" ]; then
+        log_trace "setup-executor" "No configuration file for service: $service (skipping)"
         return 0
     fi
 
-    log_section "Configuring: $template"
-
     # Validate JSON
-    if ! jq empty "$setup_file" 2>/dev/null; then
-        log_error "Invalid JSON in $setup_file"
+    if ! jq empty "$service_json" 2>/dev/null; then
+        log_error "Invalid JSON in $service_json"
         return 1
     fi
 
-    local template_name=$(jq -r '.name' "$setup_file")
-    local description=$(jq -r '.description' "$setup_file")
+    local description=$(jq -r '.description' "$service_json")
+    local setup_steps=$(jq -r '.setup.steps' "$service_json")
 
-    log_info "$description"
-    echo ""
+    # If no setup steps, skip
+    if [ "$setup_steps" = "null" ] || [ -z "$setup_steps" ]; then
+        log_trace "setup-executor" "No setup steps for service: $service"
+        return 0
+    fi
+
+    log_section "Configuring: $description"
 
     # Get number of steps
-    local step_count=$(jq '.steps | length' "$setup_file")
-    log_info "Executing $step_count configuration steps..."
+    local step_count=$(jq '.setup.steps | length' "$service_json")
+    log_info "Executing $step_count configuration step(s)..."
     echo ""
 
     # Execute each step
     local i=0
     while [ $i -lt $step_count ]; do
-        local step=$(jq ".steps[$i]" "$setup_file")
+        local step=$(jq ".setup.steps[$i]" "$service_json")
         execute_step "$step" || return 1
         ((i++))
     done
 
-    log_success "Template $template configured successfully"
+    log_success "$service configured successfully"
     echo ""
+}
+
+# Execute setup for a template (processes all services in order)
+execute_template_setup() {
+    local template=$1
+    local services_file="${TEMPLATES_DIR}/${template}/services.list"
+
+    if [ ! -f "$services_file" ]; then
+        log_warning "No services.list found for template: $template"
+        return 0
+    fi
+
+    log_section "Processing template: $template"
+
+    # Read services.list and execute setup for each service
+    while IFS= read -r service || [ -n "$service" ]; do
+        # Skip comments and empty lines
+        [[ "$service" =~ ^#.*$ ]] && continue
+        [[ -z "$service" ]] && continue
+
+        # Trim whitespace
+        service=$(echo "$service" | xargs)
+
+        # Execute service setup
+        execute_service_setup "$service"
+    done < "${services_file}"
 }
 
 # Main execution

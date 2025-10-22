@@ -1,0 +1,58 @@
+{
+  "service": "radarr",
+  "description": "Radarr - Movie Collection Manager",
+  "compose_file": "radarr.yml",
+  "setup": {
+    "steps": [
+      {
+        "action": "wait_for_service",
+        "description": "Waiting for Radarr to be ready",
+        "params": {
+          "service": "radarr",
+          "port": 7878,
+          "timeout": 120
+        }
+      },
+      {
+        "action": "extract_api_key",
+        "description": "Extracting Radarr API key",
+        "params": {
+          "service": "radarr",
+          "output_var": "RADARR_API_KEY"
+        }
+      },
+      {
+        "action": "add_root_folder",
+        "description": "Adding Movies root folder",
+        "params": {
+          "service": "radarr",
+          "port": 7878,
+          "api_key_var": "RADARR_API_KEY",
+          "path": "/data/media/movies",
+          "name": "Movies"
+        }
+      },
+      {
+        "action": "add_download_client",
+        "description": "Connecting Decypharr download client",
+        "params": {
+          "service": "radarr",
+          "port": 7878,
+          "api_key_var": "RADARR_API_KEY",
+          "client_name": "Decypharr",
+          "client_host": "decypharr",
+          "client_port": 8283
+        }
+      },
+      {
+        "action": "delete_default_quality_profiles",
+        "description": "Removing default quality profiles",
+        "params": {
+          "service": "radarr",
+          "port": 7878,
+          "api_key_var": "RADARR_API_KEY"
+        }
+      }
+    ]
+  }
+}
