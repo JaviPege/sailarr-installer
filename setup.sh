@@ -1279,3 +1279,45 @@ echo "  ${SETUP_TRACE_FILE}"
 echo "========================================="
 log_info "Installation completed successfully"
 log_to_file "COMPLETE" "Installation finished at $(date)"
+
+# Ask if user wants to remove the installer repository
+echo ""
+echo "========================================="
+echo "Cleanup"
+echo "========================================="
+echo ""
+echo "The installer repository is no longer needed. All configuration"
+echo "files have been copied to ${ROOT_DIR}."
+echo ""
+echo "Installation directory: $(pwd)"
+echo ""
+read -p "Do you want to remove the installer repository? [y/N]: " -n 1 -r
+echo ""
+
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+    INSTALLER_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    log_info "Removing installer repository: ${INSTALLER_DIR}"
+
+    # Move to parent directory before deletion
+    cd "${INSTALLER_DIR}/.."
+
+    # Remove the installer directory
+    rm -rf "${INSTALLER_DIR}"
+
+    if [ $? -eq 0 ]; then
+        log_success "Installer repository removed successfully"
+        echo ""
+        echo "The sailarr-installer directory has been deleted."
+        echo "All your configuration is preserved in ${ROOT_DIR}"
+    else
+        log_error "Failed to remove installer repository"
+        echo "You can manually delete it later: rm -rf ${INSTALLER_DIR}"
+    fi
+else
+    log_info "Installer repository kept at: $(pwd)"
+    echo ""
+    echo "You can manually remove it later if needed:"
+    echo "  rm -rf $(pwd)"
+fi
+
+echo ""
