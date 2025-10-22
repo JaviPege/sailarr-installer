@@ -865,9 +865,9 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     sleep 5
 
     # Extract API keys using library function
-    RADARR_API_KEY=$(extract_api_key "radarr")
-    SONARR_API_KEY=$(extract_api_key "sonarr")
-    PROWLARR_API_KEY=$(extract_api_key "prowlarr")
+    RADARR_API_KEY=$(extract_api_key "radarr" | tail -1)
+    SONARR_API_KEY=$(extract_api_key "sonarr" | tail -1)
+    PROWLARR_API_KEY=$(extract_api_key "prowlarr" | tail -1)
 
     if [ -z "$RADARR_API_KEY" ] || [ -z "$SONARR_API_KEY" ] || [ -z "$PROWLARR_API_KEY" ]; then
         log_error "Failed to retrieve API keys. Services may not be fully initialized."
