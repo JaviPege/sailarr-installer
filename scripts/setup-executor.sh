@@ -151,6 +151,13 @@ execute_step() {
             log_warning "$message"
             ;;
 
+        sleep)
+            local seconds=$(echo "$params" | jq -r '.seconds // 5')
+            local reason=$(echo "$params" | jq -r '.reason // "Waiting for service to stabilize"')
+            log_info "$reason (${seconds}s)"
+            sleep "$seconds"
+            ;;
+
         *)
             log_error "Unknown action: $action"
             return 1

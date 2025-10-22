@@ -42,6 +42,14 @@
         }
       },
       {
+        "action": "sleep",
+        "description": "Waiting for Decypharr API to stabilize",
+        "params": {
+          "seconds": 10,
+          "reason": "Allowing Decypharr API to fully initialize"
+        }
+      },
+      {
         "action": "add_download_client",
         "description": "Connecting Decypharr download client",
         "params": {
