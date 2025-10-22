@@ -196,7 +196,7 @@ execute_service_setup() {
     while [ $i -lt $step_count ]; do
         local step=$(jq ".setup.steps[$i]" "$service_json")
         execute_step "$step" || return 1
-        ((i++))
+        i=$((i + 1))  # Avoid ((i++)) with set -e as it can cause exit on non-zero result
     done
 
     log_success "$service configured successfully"
