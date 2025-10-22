@@ -210,6 +210,76 @@ EOF
     echo ""
 }
 
+# Create folder with permissions (atomic, reusable)
+# Usage: create_folder "/path/to/folder" "owner:group" "permissions"
+create_folder() {
+    local folder_path="$1"
+    local owner="${2:-$USER:$USER}"
+    local permissions="${3:-755}"
+
+    sudo mkdir -p "$folder_path"
+    sudo chown "$owner" "$folder_path"
+    sudo chmod "$permissions" "$folder_path"
+}
+
+# Show installation summary
+show_installation_summary() {
+    echo ""
+    echo "========================================="
+    echo "Installation Summary"
+    echo "========================================="
+    echo ""
+    echo "GENERAL CONFIGURATION"
+    echo "---------------------"
+    echo "Installation directory: ${ROOT_DIR}"
+    echo "Docker configuration:   $SCRIPT_DIR/docker/"
+    echo "Timezone:              ${TIMEZONE}"
+    echo "Domain:                ${DOMAIN_NAME}"
+    echo ""
+    echo "CREDENTIALS"
+    echo "-----------"
+    echo "Real-Debrid token:     ${REALDEBRID_TOKEN:0:20}... (configured)"
+    if [ -n "$PLEX_CLAIM" ]; then
+        echo "Plex claim token:      ${PLEX_CLAIM:0:20}... (configured)"
+    else
+        echo "Plex claim token:      (skipped - configure later)"
+    fi
+    echo ""
+    echo "USERS TO BE CREATED"
+    echo "-------------------"
+    echo "  - rclone (UID: ${RCLONE_UID})"
+    echo "  - sonarr (UID: ${SONARR_UID})"
+    echo "  - radarr (UID: ${RADARR_UID})"
+    echo "  - recyclarr (UID: ${RECYCLARR_UID})"
+    echo "  - prowlarr (UID: ${PROWLARR_UID})"
+    echo "  - overseerr (UID: ${OVERSEERR_UID})"
+    echo "  - plex (UID: ${PLEX_UID})"
+    echo "  - decypharr (UID: ${DECYPHARR_UID})"
+    echo "  - autoscan (UID: ${AUTOSCAN_UID})"
+    echo "  - pinchflat (UID: ${PINCHFLAT_UID})"
+    echo ""
+    echo "GROUP TO BE CREATED"
+    echo "-------------------"
+    echo "  - mediacenter (GID: ${MEDIACENTER_GID})"
+    echo ""
+    echo "DIRECTORIES TO BE CREATED"
+    echo "-------------------------"
+    echo "  - ${ROOT_DIR}/config/{sonarr,radarr,recyclarr,prowlarr,overseerr,plex,autoscan,zilean,decypharr}-config"
+    echo "  - ${ROOT_DIR}/data/symlinks/{radarr,sonarr}"
+    echo "  - ${ROOT_DIR}/data/realdebrid-zurg"
+    echo "  - ${ROOT_DIR}/data/media/{movies,tv}"
+    echo ""
+    echo "ADDITIONAL TASKS"
+    echo "----------------"
+    echo "  - Download Torrentio indexer for Prowlarr"
+    echo "  - Configure Zurg with Real-Debrid token"
+    echo "  - Configure Decypharr with Real-Debrid token"
+    echo "  - Set permissions (775/664)"
+    echo "  - Add current user ($USER) to mediacenter group"
+    echo ""
+    echo "========================================="
+}
+
 # Check for existing configuration
 check_existing_config() {
     if [ -f "$SCRIPT_DIR/docker/.env.install" ]; then
@@ -426,64 +496,17 @@ fi
 # PHASE 2: SHOW SUMMARY
 # ========================================
 
-echo ""
-echo "========================================="
-echo "Installation Summary"
-echo "========================================="
-echo ""
-echo "GENERAL CONFIGURATION"
-echo "---------------------"
-echo "Installation directory: ${ROOT_DIR}"
-echo "Docker configuration:   $SCRIPT_DIR/docker/"
-echo "Timezone:              ${TIMEZONE}"
-echo "Domain:                ${DOMAIN_NAME}"
-echo ""
-echo "CREDENTIALS"
-echo "-----------"
-echo "Real-Debrid token:     ${REALDEBRID_TOKEN:0:20}... (configured)"
-if [ -n "$PLEX_CLAIM" ]; then
-    echo "Plex claim token:      ${PLEX_CLAIM:0:20}... (configured)"
-else
-    echo "Plex claim token:      (skipped - configure later)"
-fi
-echo ""
-echo "USERS TO BE CREATED"
-echo "-------------------"
-echo "  - rclone (UID: ${RCLONE_UID})"
-echo "  - sonarr (UID: ${SONARR_UID})"
-echo "  - radarr (UID: ${RADARR_UID})"
-echo "  - recyclarr (UID: ${RECYCLARR_UID})"
-echo "  - prowlarr (UID: ${PROWLARR_UID})"
-echo "  - overseerr (UID: ${OVERSEERR_UID})"
-echo "  - plex (UID: ${PLEX_UID})"
-echo "  - decypharr (UID: ${DECYPHARR_UID})"
-echo "  - autoscan (UID: ${AUTOSCAN_UID})"
-echo "  - pinchflat (UID: ${PINCHFLAT_UID})"
-echo ""
-echo "GROUP TO BE CREATED"
-echo "-------------------"
-echo "  - mediacenter (GID: ${MEDIACENTER_GID})"
-echo ""
-echo "DIRECTORIES TO BE CREATED"
-echo "-------------------------"
-echo "  - ${ROOT_DIR}/config/{sonarr,radarr,recyclarr,prowlarr,overseerr,plex,autoscan,zilean,decypharr}-config"
-echo "  - ${ROOT_DIR}/data/symlinks/{radarr,sonarr}"
-echo "  - ${ROOT_DIR}/data/realdebrid-zurg"
-echo "  - ${ROOT_DIR}/data/media/{movies,tv}"
-echo ""
-echo "ADDITIONAL TASKS"
-echo "----------------"
-echo "  - Download Torrentio indexer for Prowlarr"
-echo "  - Configure Zurg with Real-Debrid token"
-echo "  - Configure Decypharr with Real-Debrid token"
-echo "  - Set permissions (775/664)"
-echo "  - Add current user ($USER) to mediacenter group"
-echo ""
-echo "========================================="
-read -p "Do you want to proceed with the installation? (y/n): " -r
-echo ""
+show_installation_summary
 
-if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+ask_user_input \
+    "" \
+    "" \
+    "Do you want to proceed with the installation? (y/n): " \
+    "" \
+    "false" \
+    "install_confirm"
+
+if [[ ! $install_confirm =~ ^[Yy]$ ]]; then
     echo "Installation cancelled by user."
     echo "Your configuration has been saved to: $SCRIPT_DIR/docker/.env.install"
     echo "You can run this script again to install with the same configuration."
@@ -521,10 +544,26 @@ add_user_to_group $USER mediacenter
 # Create directories
 echo ""
 echo "Creating directory structure..."
-sudo mkdir -pv "${ROOT_DIR}/config"/{sonarr,radarr,recyclarr,prowlarr,overseerr,plex,autoscan,zilean,decypharr,pinchflat}-config
-sudo mkdir -pv "${ROOT_DIR}/data/symlinks"/{radarr,sonarr}
-sudo mkdir -pv "${ROOT_DIR}/data/realdebrid-zurg"
-sudo mkdir -pv "${ROOT_DIR}/data/media"/{movies,tv}
+
+# Config directories for each service
+create_folder "${ROOT_DIR}/config/sonarr-config" "$INSTALL_UID:mediacenter" "775"
+create_folder "${ROOT_DIR}/config/radarr-config" "$INSTALL_UID:mediacenter" "775"
+create_folder "${ROOT_DIR}/config/recyclarr-config" "$INSTALL_UID:mediacenter" "775"
+create_folder "${ROOT_DIR}/config/prowlarr-config" "$INSTALL_UID:mediacenter" "775"
+create_folder "${ROOT_DIR}/config/overseerr-config" "$INSTALL_UID:mediacenter" "775"
+create_folder "${ROOT_DIR}/config/plex-config" "$INSTALL_UID:mediacenter" "775"
+create_folder "${ROOT_DIR}/config/autoscan-config" "$INSTALL_UID:mediacenter" "775"
+create_folder "${ROOT_DIR}/config/zilean-config" "$INSTALL_UID:mediacenter" "775"
+create_folder "${ROOT_DIR}/config/decypharr-config" "$INSTALL_UID:mediacenter" "775"
+create_folder "${ROOT_DIR}/config/pinchflat-config" "$INSTALL_UID:mediacenter" "775"
+
+# Data directories
+create_folder "${ROOT_DIR}/data/symlinks/radarr" "$INSTALL_UID:mediacenter" "775"
+create_folder "${ROOT_DIR}/data/symlinks/sonarr" "$INSTALL_UID:mediacenter" "775"
+create_folder "${ROOT_DIR}/data/realdebrid-zurg" "$INSTALL_UID:mediacenter" "775"
+create_folder "${ROOT_DIR}/data/media/movies" "$INSTALL_UID:mediacenter" "775"
+create_folder "${ROOT_DIR}/data/media/tv" "$INSTALL_UID:mediacenter" "775"
+
 echo "✓ Directory structure created"
 
 # Set permissions
