@@ -1302,14 +1302,15 @@ read -p "Do you want to remove the installer repository? [y/N]: " -n 1 -r
 echo ""
 
 if [[ $REPLY =~ ^[Yy]$ ]]; then
-    INSTALLER_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    log_info "Removing installer repository: ${INSTALLER_DIR}"
+    # Use SCRIPT_DIR that was calculated at the start of the script
+    # This is more reliable than recalculating from BASH_SOURCE
+    log_info "Removing installer repository: ${SCRIPT_DIR}"
 
     # Move to parent directory before deletion
-    cd "${INSTALLER_DIR}/.."
+    cd "${SCRIPT_DIR}/.."
 
     # Remove the installer directory
-    rm -rf "${INSTALLER_DIR}"
+    rm -rf "${SCRIPT_DIR}"
 
     if [ $? -eq 0 ]; then
         log_success "Installer repository removed successfully"
@@ -1318,13 +1319,13 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
         echo "All your configuration is preserved in ${ROOT_DIR}"
     else
         log_error "Failed to remove installer repository"
-        echo "You can manually delete it later: rm -rf ${INSTALLER_DIR}"
+        echo "You can manually delete it later: rm -rf ${SCRIPT_DIR}"
     fi
 else
-    log_info "Installer repository kept at: $(pwd)"
+    log_info "Installer repository kept at: ${SCRIPT_DIR}"
     echo ""
     echo "You can manually remove it later if needed:"
-    echo "  rm -rf $(pwd)"
+    echo "  rm -rf ${SCRIPT_DIR}"
 fi
 
 echo ""
