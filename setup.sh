@@ -1110,7 +1110,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
         # Create temporary recyclarr config with API keys
         cp "${ROOT_DIR}/recyclarr.yml" /tmp/recyclarr-temp.yml
         sed -i "10s|api_key:.*|api_key: ${RADARR_API_KEY}|" /tmp/recyclarr-temp.yml
-        sed -i "205s|api_key:.*|api_key: ${SONARR_API_KEY}|" /tmp/recyclarr-temp.yml
+        sed -i "209s|api_key:.*|api_key: ${SONARR_API_KEY}|" /tmp/recyclarr-temp.yml
 
         docker run --rm \
             --network mediacenter \
