@@ -171,6 +171,8 @@ add_download_client() {
 
 # Add *arr application to Prowlarr
 add_arr_to_prowlarr() {
+    log_function_enter "add_arr_to_prowlarr" "$1 $2 [api_key] $4 [prowlarr_key]"
+
     local service=$1          # radarr or sonarr
     local service_port=$2     # 7878 or 8989
     local service_api_key=$3
@@ -178,6 +180,8 @@ add_arr_to_prowlarr() {
     local prowlarr_api_key=$5
 
     log_info "Adding $service as application in Prowlarr"
+    log_debug "Service: $service, Port: $service_port, Prowlarr Port: $prowlarr_port"
+    log_debug "Service API key length: ${#service_api_key}, Prowlarr API key length: ${#prowlarr_api_key}"
 
     # Determine sync categories based on service
     local sync_categories=""
