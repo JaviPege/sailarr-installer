@@ -454,7 +454,7 @@ api_post_request() {
 }
 
 # Configure authentication for *arr service (atomic, call N times)
-# Usage: configure_arr_authentication "service_name" "port" "api_key" "username" "password"
+# Usage: configure_arr_authentication "service_name" "port" "api_key" "username" "password" ["api_version"]
 # Returns: 0 if success, 1 if failed
 configure_arr_authentication() {
     local service_name="$1"
@@ -462,13 +462,14 @@ configure_arr_authentication() {
     local api_key="$3"
     local username="$4"
     local password="$5"
+    local api_version="${6:-v3}"  # Default to v3 for Radarr/Sonarr, v1 for Prowlarr
     local config
     local updated_config
 
     echo "  ⟳ Configuring $service_name authentication..." >&2
 
     # Get current config
-    if ! api_get_request "http://localhost:$port/api/v3/config/host" "$api_key" config; then
+    if ! api_get_request "http://localhost:$port/api/$api_version/config/host" "$api_key" config; then
         log_error "Failed to get $service_name config for authentication setup" >&2
         return 1
     fi
@@ -483,7 +484,7 @@ configure_arr_authentication() {
         '. + {authenticationMethod: "forms", username: $user, password: $pass, passwordConfirmation: $pass, authenticationRequired: "enabled"}')
 
     # Send update
-    if api_put_request "http://localhost:$port/api/v3/config/host" "$api_key" "$updated_config"; then
+    if api_put_request "http://localhost:$port/api/$api_version/config/host" "$api_key" "$updated_config"; then
         echo "  ✓ $service_name authentication configured" >&2
         return 0
     else
@@ -1545,7 +1546,7 @@ if [[ $autoconfig_choice =~ ^[Yy]$ ]]; then
 
         # Configure Prowlarr authentication if enabled using atomic function
         if [ "$AUTH_ENABLED" = true ]; then
-            if ! configure_arr_authentication "Prowlarr" "$PROWLARR_PORT" "$PROWLARR_API_KEY" "$AUTH_USERNAME" "$AUTH_PASSWORD"; then
+            if ! configure_arr_authentication "Prowlarr" "$PROWLARR_PORT" "$PROWLARR_API_KEY" "$AUTH_USERNAME" "$AUTH_PASSWORD" "v1"; then
                 log_error "Failed to configure Prowlarr authentication (non-critical)"
             fi
         fi
