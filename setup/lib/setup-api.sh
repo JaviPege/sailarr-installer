@@ -22,8 +22,8 @@ api_call() {
     local response
     local http_code
 
-    log_operation "API_CALL" "$method $url"
-    log_trace "api_call" "Data length: ${#data} bytes"
+    # Only log the operation summary, not the full JSON payload
+    log_trace "api_call" "$method $url (${#data} bytes)"
 
     # Build curl command
     local curl_cmd="curl -s -w '\n%{http_code}' -X $method '$url' \
@@ -67,7 +67,6 @@ extract_api_key() {
     local attempt=0
 
     log_info "Extracting API key from $container_name..."
-    log_operation "GREP" "docker exec $container_name cat $config_file | grep ApiKey"
 
     while [ $attempt -lt $max_attempts ]; do
         local api_key=$(docker exec "$container_name" cat "$config_file" 2>/dev/null | grep -oP '(?<=<ApiKey>)[^<]+' 2>/dev/null)
@@ -180,8 +179,6 @@ add_arr_to_prowlarr() {
     local prowlarr_api_key=$5
 
     log_info "Adding $service as application in Prowlarr"
-    log_debug "Service: $service, Port: $service_port, Prowlarr Port: $prowlarr_port"
-    log_debug "Service API key length: ${#service_api_key}, Prowlarr API key length: ${#prowlarr_api_key}"
 
     # Determine sync categories based on service
     local sync_categories=""
