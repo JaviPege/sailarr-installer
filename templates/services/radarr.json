@@ -33,6 +33,15 @@
         }
       },
       {
+        "action": "wait_for_service",
+        "description": "Waiting for Decypharr to be ready",
+        "params": {
+          "service": "decypharr",
+          "port": 8283,
+          "timeout": 60
+        }
+      },
+      {
         "action": "add_download_client",
         "description": "Connecting Decypharr download client",
         "params": {
