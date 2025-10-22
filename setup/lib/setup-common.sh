@@ -128,9 +128,16 @@ wait_for_service() {
         log_trace "wait_for_service" "Checking health of $service_name (elapsed: ${elapsed}s)"
 
         if docker ps --filter "name=$service_name" --filter "health=healthy" --format "{{.Names}}" | grep -q "$service_name"; then
-            log_success "$service_name is healthy"
-            log_function_exit "wait_for_service" 0 "healthy after ${elapsed}s"
-            return 0
+            # Container is healthy, now verify port is actually accessible
+            log_trace "wait_for_service" "Container healthy, verifying port ${port} is accessible"
+
+            if curl -sf -o /dev/null --connect-timeout 2 "http://${service_name}:${port}${endpoint}" 2>/dev/null; then
+                log_success "$service_name is healthy and port ${port} is accessible"
+                log_function_exit "wait_for_service" 0 "ready after ${elapsed}s"
+                return 0
+            else
+                log_trace "wait_for_service" "Port ${port} not yet accessible, waiting..."
+            fi
         fi
 
         sleep $interval
