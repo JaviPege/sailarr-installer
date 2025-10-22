@@ -159,7 +159,9 @@ add_download_client() {
         \"tags\": []
     }"
 
-    log_debug "Download client JSON payload:" >&2
+    log_debug "Download client JSON payload (raw):" >&2
+    echo "$data" >&2
+    log_debug "Download client JSON payload (parsed):" >&2
     echo "$data" | jq '.' >&2 || log_error "Invalid JSON generated" >&2
 
     if api_call "POST" "$service" "$port" "downloadclient" "$api_key" "$data" > /dev/null; then
