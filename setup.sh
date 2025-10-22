@@ -493,6 +493,33 @@ configure_arr_authentication() {
     fi
 }
 
+# Configure authentication for Decypharr (atomic, call 1 time)
+# Usage: configure_decypharr_authentication "port" "username" "password"
+# Returns: 0 if success, 1 if failed
+configure_decypharr_authentication() {
+    local port="$1"
+    local username="$2"
+    local password="$3"
+    local payload
+
+    echo "  ⟳ Configuring Decypharr authentication..." >&2
+
+    # Build JSON payload
+    payload=$(jq -n \
+        --arg user "$username" \
+        --arg pass "$password" \
+        '{username: $user, password: $pass, confirm_password: $pass}')
+
+    # Send POST request
+    if api_post_request "http://localhost:$port/api/update-auth" "" "$payload"; then
+        echo "  ✓ Decypharr authentication configured" >&2
+        return 0
+    else
+        log_error "Failed to configure Decypharr authentication" >&2
+        return 1
+    fi
+}
+
 # Get Prowlarr application ID by name (atomic, call N times)
 # Usage: get_prowlarr_app_id "port" "api_key" "app_name" "output_var"
 # Returns: 0 if found, 1 if not found
@@ -1393,6 +1420,14 @@ if [[ $autoconfig_choice =~ ^[Yy]$ ]]; then
         if [ "$AUTH_ENABLED" = true ]; then
             if ! configure_arr_authentication "Sonarr" "$SONARR_PORT" "$SONARR_API_KEY" "$AUTH_USERNAME" "$AUTH_PASSWORD"; then
                 log_error "Installation aborted - authentication configuration failed"
+                exit 1
+            fi
+        fi
+
+        # Configure Decypharr authentication if enabled using atomic function
+        if [ "$AUTH_ENABLED" = true ]; then
+            if ! configure_decypharr_authentication "$DECYPHARR_PORT" "$AUTH_USERNAME" "$AUTH_PASSWORD"; then
+                log_error "Installation aborted - Decypharr authentication configuration failed"
                 exit 1
             fi
         fi
