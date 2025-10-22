@@ -8,6 +8,8 @@ source "${LIB_DIR}/setup-common.sh"
 
 # Generic API call function
 api_call() {
+    log_function_enter "api_call" "method=$1 service=$2 port=$3 endpoint=$4"
+
     local method=$1      # GET, POST, PUT, DELETE
     local service=$2     # Service name (radarr, sonarr, prowlarr)
     local port=$3        # Service port
@@ -20,6 +22,9 @@ api_call() {
     local response
     local http_code
 
+    log_operation "API_CALL" "$method $url"
+    log_trace "api_call" "Data length: ${#data} bytes"
+
     # Build curl command
     local curl_cmd="curl -s -w '\n%{http_code}' -X $method '$url' \
         -H 'X-Api-Key: $api_key' \
@@ -28,32 +33,41 @@ api_call() {
     # Add data if provided
     if [ -n "$data" ]; then
         curl_cmd="$curl_cmd -d '$data'"
+        log_trace "api_call" "Request includes JSON payload"
     fi
 
     # Execute and capture response
+    log_trace "api_call" "Executing curl command"
     response=$(eval $curl_cmd)
     http_code=$(echo "$response" | tail -n1)
     response=$(echo "$response" | sed '$d')
 
+    log_trace "api_call" "HTTP Status: $http_code, Response length: ${#response} bytes"
+
     # Check HTTP status
     if [[ "$http_code" =~ ^2 ]]; then
+        log_function_exit "api_call" 0 "HTTP $http_code"
         echo "$response"
         return 0
     else
         log_error "API call failed: $method $endpoint (HTTP $http_code)"
         log_error "Response: $response"
+        log_function_exit "api_call" 1 "HTTP $http_code"
         return 1
     fi
 }
 
 # Extract API key from service config
 extract_api_key() {
+    log_function_enter "extract_api_key" "$@"
+
     local container_name=$1
     local config_file=${2:-"/config/config.xml"}
     local max_attempts=${3:-30}
     local attempt=0
 
     log_info "Extracting API key from $container_name..."
+    log_operation "GREP" "docker exec $container_name cat $config_file | grep ApiKey"
 
     while [ $attempt -lt $max_attempts ]; do
         local api_key=$(docker exec "$container_name" cat "$config_file" 2>/dev/null | grep -oP '(?<=<ApiKey>)[^<]+' 2>/dev/null)

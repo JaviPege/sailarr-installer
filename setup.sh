@@ -23,6 +23,14 @@ source "${LIB_DIR}/setup-users.sh"
 source "${LIB_DIR}/setup-api.sh"
 source "${LIB_DIR}/setup-services.sh"
 
+# Initialize logging
+init_logging
+
+log_section "Sailarr Installer"
+log_info "Script directory: ${SCRIPT_DIR}"
+log_info "Logs directory: ${SETUP_LOG_DIR}"
+echo ""
+
 # Check if .env.install exists - if yes, skip configuration and go straight to install
 if [ -f "$SCRIPT_DIR/docker/.env.install" ]; then
     echo "========================================="
@@ -435,16 +443,19 @@ echo "✓ Permissions set"
 if [ "$ROOT_DIR" != "$SCRIPT_DIR" ]; then
     echo ""
     echo "Copying docker configuration to installation directory..."
+    log_operation "COPY" "docker directory to ${ROOT_DIR}/docker"
     sudo cp -r "$SCRIPT_DIR/docker" "${ROOT_DIR}/"
     sudo chown -R $INSTALL_UID:mediacenter "${ROOT_DIR}/docker"
     echo "✓ Docker configuration copied to ${ROOT_DIR}/docker"
 
     # Copy rclone.conf
+    log_operation "COPY" "rclone.conf to ${ROOT_DIR}/"
     sudo cp "$SCRIPT_DIR/config/rclone.conf" "${ROOT_DIR}/"
     sudo chown rclone:mediacenter "${ROOT_DIR}/rclone.conf"
     echo "✓ rclone.conf copied to ${ROOT_DIR}/"
 
     # Copy recyclarr configuration
+    log_operation "COPY" "recyclarr.yml and recyclarr-sync.sh to ${ROOT_DIR}/"
     sudo cp "$SCRIPT_DIR/config/recyclarr.yml" "${ROOT_DIR}/"
     sudo cp "$SCRIPT_DIR/scripts/recyclarr-sync.sh" "${ROOT_DIR}/"
     sudo chown $INSTALL_UID:mediacenter "${ROOT_DIR}/recyclarr.yml" "${ROOT_DIR}/recyclarr-sync.sh"
@@ -455,9 +466,11 @@ fi
 # Download custom indexer definitions for Prowlarr
 echo ""
 echo "Downloading custom indexer definitions..."
+log_operation "MKDIR" "${ROOT_DIR}/config/prowlarr-config/Definitions/Custom"
 sudo mkdir -p ${ROOT_DIR}/config/prowlarr-config/Definitions/Custom
 
 # Download Torrentio from official repository
+log_operation "DOWNLOAD" "Torrentio indexer definition from GitHub"
 curl -sL https://github.com/dreulavelle/Prowlarr-Indexers/raw/main/Custom/torrentio.yml -o /tmp/torrentio.yml
 sudo cp /tmp/torrentio.yml ${ROOT_DIR}/config/prowlarr-config/Definitions/Custom/
 sudo chown prowlarr:mediacenter ${ROOT_DIR}/config/prowlarr-config/Definitions/Custom/torrentio.yml
@@ -1083,4 +1096,11 @@ echo "   ./down.sh    # Stop all services"
 echo "   ./restart.sh # Restart all services"
 echo ""
 echo "For detailed setup guide, visit the documentation."
+echo ""
 echo "========================================="
+echo "Installation logs saved to:"
+echo "  ${SETUP_LOG_FILE}"
+echo "  ${SETUP_TRACE_FILE}"
+echo "========================================="
+log_info "Installation completed successfully"
+log_to_file "COMPLETE" "Installation finished at $(date)"

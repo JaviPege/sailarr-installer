@@ -73,12 +73,16 @@ add_user_to_group() {
 
 # Create all mediacenter users and groups
 setup_mediacenter_users() {
+    log_function_enter "setup_mediacenter_users" "$@"
+
     local base_uid=${1:-1000}
     local base_gid=${2:-1000}
 
     log_section "Setting up Users and Groups"
+    log_debug "Base UID: $base_uid, Base GID: $base_gid"
 
     # Find available IDs
+    log_operation "UID/GID Allocation" "Finding available IDs starting from UID:$base_uid GID:$base_gid"
     local mediacenter_gid=$(find_available_gid $base_gid)
     local rclone_uid=$(find_available_uid $base_uid)
     local sonarr_uid=$(find_available_uid $((rclone_uid + 1)))
