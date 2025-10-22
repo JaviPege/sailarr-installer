@@ -68,36 +68,36 @@ log_function_exit() {
 
 # Logging functions (console + file)
 log_info() {
-    echo -e "${COLOR_BLUE}[INFO]${COLOR_RESET} $1"
+    echo -e "${COLOR_BLUE}[INFO]${COLOR_RESET} $1" >&2
     log_to_file "INFO" "$1"
 }
 
 log_success() {
-    echo -e "${COLOR_GREEN}[✓]${COLOR_RESET} $1"
+    echo -e "${COLOR_GREEN}[✓]${COLOR_RESET} $1" >&2
     log_to_file "SUCCESS" "$1"
 }
 
 log_warning() {
-    echo -e "${COLOR_YELLOW}[WARNING]${COLOR_RESET} $1"
+    echo -e "${COLOR_YELLOW}[WARNING]${COLOR_RESET} $1" >&2
     log_to_file "WARNING" "$1"
 }
 
 log_error() {
-    echo -e "${COLOR_RED}[ERROR]${COLOR_RESET} $1"
+    echo -e "${COLOR_RED}[ERROR]${COLOR_RESET} $1" >&2
     log_to_file "ERROR" "$1"
 }
 
 log_debug() {
-    echo -e "${COLOR_CYAN}[DEBUG]${COLOR_RESET} $1"
+    echo -e "${COLOR_CYAN}[DEBUG]${COLOR_RESET} $1" >&2
     log_to_file "DEBUG" "$1"
 }
 
 log_section() {
-    echo ""
-    echo "========================================="
-    echo "$1"
-    echo "========================================="
-    echo ""
+    echo "" >&2
+    echo "=========================================" >&2
+    echo "$1" >&2
+    echo "=========================================" >&2
+    echo "" >&2
     log_to_file "SECTION" "$1"
 }
 
@@ -105,7 +105,7 @@ log_operation() {
     local operation=$1
     shift
     local details="$@"
-    echo -e "${COLOR_MAGENTA}[OP]${COLOR_RESET} ${operation}: ${details}"
+    echo -e "${COLOR_MAGENTA}[OP]${COLOR_RESET} ${operation}: ${details}" >&2
     log_to_file "OPERATION" "${operation}: ${details}"
 }
 
