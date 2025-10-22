@@ -12,7 +12,10 @@ export COLOR_CYAN='\033[0;36m'
 export COLOR_RESET='\033[0m'
 
 # Setup logging
-export SETUP_LOG_DIR="/tmp/sailarr-install-$(date +%Y%m%d-%H%M%S)"
+# Only initialize if not already set (allows sharing log dir across scripts)
+if [ -z "$SETUP_LOG_DIR" ]; then
+    export SETUP_LOG_DIR="/tmp/sailarr-install-$(date +%Y%m%d-%H%M%S)"
+fi
 export SETUP_LOG_FILE="${SETUP_LOG_DIR}/install.log"
 export SETUP_TRACE_FILE="${SETUP_LOG_DIR}/trace.log"
 
