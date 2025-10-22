@@ -1,0 +1,22 @@
+{
+  "name": "mediaplayers/plex",
+  "description": "Plex Media Server setup configuration",
+  "steps": [
+    {
+      "action": "wait_for_service",
+      "description": "Wait for Plex to be ready",
+      "params": {
+        "service": "plex",
+        "port": 32400,
+        "timeout": 120
+      }
+    },
+    {
+      "action": "log_info",
+      "description": "Display Plex access information",
+      "params": {
+        "message": "Plex is now accessible at http://${SERVER_IP}:32400/web"
+      }
+    }
+  ]
+}

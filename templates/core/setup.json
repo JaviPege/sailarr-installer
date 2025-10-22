@@ -1,0 +1,161 @@
+{
+  "name": "core",
+  "description": "Core stack setup configuration",
+  "steps": [
+    {
+      "action": "wait_for_service",
+      "description": "Wait for Radarr to be ready",
+      "params": {
+        "service": "radarr",
+        "port": 7878,
+        "timeout": 120
+      }
+    },
+    {
+      "action": "wait_for_service",
+      "description": "Wait for Sonarr to be ready",
+      "params": {
+        "service": "sonarr",
+        "port": 8989,
+        "timeout": 120
+      }
+    },
+    {
+      "action": "wait_for_service",
+      "description": "Wait for Prowlarr to be ready",
+      "params": {
+        "service": "prowlarr",
+        "port": 9696,
+        "timeout": 120
+      }
+    },
+    {
+      "action": "extract_api_key",
+      "description": "Extract Radarr API key",
+      "params": {
+        "service": "radarr",
+        "output_var": "RADARR_API_KEY"
+      }
+    },
+    {
+      "action": "extract_api_key",
+      "description": "Extract Sonarr API key",
+      "params": {
+        "service": "sonarr",
+        "output_var": "SONARR_API_KEY"
+      }
+    },
+    {
+      "action": "extract_api_key",
+      "description": "Extract Prowlarr API key",
+      "params": {
+        "service": "prowlarr",
+        "output_var": "PROWLARR_API_KEY"
+      }
+    },
+    {
+      "action": "add_root_folder",
+      "description": "Add Movies root folder to Radarr",
+      "params": {
+        "service": "radarr",
+        "port": 7878,
+        "api_key_var": "RADARR_API_KEY",
+        "path": "/data/media/movies",
+        "name": "Movies"
+      }
+    },
+    {
+      "action": "add_root_folder",
+      "description": "Add TV Shows root folder to Sonarr",
+      "params": {
+        "service": "sonarr",
+        "port": 8989,
+        "api_key_var": "SONARR_API_KEY",
+        "path": "/data/media/tv",
+        "name": "TV Shows"
+      }
+    },
+    {
+      "action": "add_download_client",
+      "description": "Add Decypharr to Radarr",
+      "params": {
+        "service": "radarr",
+        "port": 7878,
+        "api_key_var": "RADARR_API_KEY",
+        "client_name": "Decypharr",
+        "client_host": "decypharr",
+        "client_port": 8283
+      }
+    },
+    {
+      "action": "add_download_client",
+      "description": "Add Decypharr to Sonarr",
+      "params": {
+        "service": "sonarr",
+        "port": 8989,
+        "api_key_var": "SONARR_API_KEY",
+        "client_name": "Decypharr",
+        "client_host": "decypharr",
+        "client_port": 8283
+      }
+    },
+    {
+      "action": "add_indexer_to_prowlarr",
+      "description": "Add Zilean indexer to Prowlarr",
+      "params": {
+        "prowlarr_port": 9696,
+        "prowlarr_api_key_var": "PROWLARR_API_KEY",
+        "indexer_name": "Zilean",
+        "indexer_url": "http://zilean:8181"
+      }
+    },
+    {
+      "action": "add_arr_to_prowlarr",
+      "description": "Add Radarr to Prowlarr",
+      "params": {
+        "service": "radarr",
+        "service_port": 7878,
+        "service_api_key_var": "RADARR_API_KEY",
+        "prowlarr_port": 9696,
+        "prowlarr_api_key_var": "PROWLARR_API_KEY"
+      }
+    },
+    {
+      "action": "add_arr_to_prowlarr",
+      "description": "Add Sonarr to Prowlarr",
+      "params": {
+        "service": "sonarr",
+        "service_port": 8989,
+        "service_api_key_var": "SONARR_API_KEY",
+        "prowlarr_port": 9696,
+        "prowlarr_api_key_var": "PROWLARR_API_KEY"
+      }
+    },
+    {
+      "action": "delete_default_quality_profiles",
+      "description": "Remove default quality profiles from Radarr",
+      "params": {
+        "service": "radarr",
+        "port": 7878,
+        "api_key_var": "RADARR_API_KEY"
+      }
+    },
+    {
+      "action": "delete_default_quality_profiles",
+      "description": "Remove default quality profiles from Sonarr",
+      "params": {
+        "service": "sonarr",
+        "port": 8989,
+        "api_key_var": "SONARR_API_KEY"
+      }
+    },
+    {
+      "action": "run_recyclarr",
+      "description": "Create TRaSH Guide quality profiles",
+      "params": {
+        "radarr_api_key_var": "RADARR_API_KEY",
+        "sonarr_api_key_var": "SONARR_API_KEY"
+      }
+    }
+  ]
+}
