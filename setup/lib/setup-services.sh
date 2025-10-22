@@ -18,8 +18,8 @@ configure_arr_service() {
 
     log_section "Configuring $service_name"
 
-    # Extract API key
-    local api_key=$(extract_api_key "$service_name")
+    # Extract API key (use tail -1 to get only the key, not log messages)
+    local api_key=$(extract_api_key "$service_name" | tail -1)
     if [ -z "$api_key" ]; then
         log_error "Failed to get API key for $service_name"
         log_error "Installation aborted - cannot continue without API key"
@@ -86,11 +86,11 @@ configure_prowlarr() {
 
     log_section "Configuring Prowlarr"
 
-    # Extract API key
-    local api_key=$(extract_api_key "prowlarr")
+    # Extract API key (use tail -1 to get only the key, not log messages)
+    local api_key=$(extract_api_key "prowlarr" | tail -1)
     if [ -z "$api_key" ]; then
         log_error "Failed to get API key for Prowlarr"
-        return 1
+        exit 1
     fi
 
     # Add Zilean indexer

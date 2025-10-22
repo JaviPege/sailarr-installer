@@ -890,7 +890,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 
         # Configure Radarr authentication if enabled
         if [ "$AUTH_ENABLED" = true ]; then
-            echo "  ⟳ Configuring authentication..."
+            echo "  ⟳ Configuring Radarr authentication..."
             # Get current config
             CONFIG=$(curl -s "http://localhost:7878/api/v3/config/host" -H "X-Api-Key: $RADARR_API_KEY")
             # Update authentication settings
@@ -900,7 +900,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
                 -H "X-Api-Key: $RADARR_API_KEY" \
                 -H "Content-Type: application/json" \
                 -d @- > /dev/null 2>&1
-            echo "  ✓ Authentication configured"
+            echo "  ✓ Radarr authentication configured"
         fi
 
         # Configure Sonarr
@@ -908,7 +908,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 
         # Configure Sonarr authentication if enabled
         if [ "$AUTH_ENABLED" = true ]; then
-            echo "  ⟳ Configuring authentication..."
+            echo "  ⟳ Configuring Sonarr authentication..."
             CONFIG=$(curl -s "http://localhost:8989/api/v3/config/host" -H "X-Api-Key: $SONARR_API_KEY")
             echo "$CONFIG" | jq --arg user "$AUTH_USERNAME" --arg pass "$AUTH_PASSWORD" \
                 '. + {authenticationMethod: "forms", username: $user, password: $pass, passwordConfirmation: $pass, authenticationRequired: "enabled"}' | \
@@ -916,7 +916,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
                 -H "X-Api-Key: $SONARR_API_KEY" \
                 -H "Content-Type: application/json" \
                 -d @- > /dev/null 2>&1
-            echo "  ✓ Authentication configured"
+            echo "  ✓ Sonarr authentication configured"
         fi
 
         # Configure Prowlarr
