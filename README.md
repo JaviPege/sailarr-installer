@@ -148,6 +148,19 @@ Replace `YOUR_DOMAIN` with your configured domain name.
 
 **Note:** If authentication is enabled, you'll be prompted for username/password when accessing any service.
 
+
+## Post-Installation Configuration
+
+After the automated installation completes, some services require manual configuration through their web interfaces:
+
+**📖 See [docker/POST-INSTALL.md](docker/POST-INSTALL.md) for detailed step-by-step instructions on:**
+
+- **Overseerr Setup** - Connect Plex account, select libraries, and add Radarr/Sonarr servers
+- **Tautulli Setup** - Connect to Plex for analytics and monitoring
+- **Additional Configuration** - Optional tweaks and customizations
+
+The automated installer handles 95% of the setup, but these services need your Plex account credentials or user preferences that can't be automated.
+
 ## How It Works
 
 The workflow is completely automated:
