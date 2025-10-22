@@ -335,23 +335,24 @@ sonarr:
           - name: Recyclarr-2160p
 
       - trash_ids:
-          # HDR Formats
-          - 7878c33f1963fefb3d6c8657d46c2f0a # DV HDR10
-          - 6d0d8de7b57e35518ac0308b0ddf404e # DV
-          - 1f733af03141f068a540eec352589a89 # DV HLG
-          - 27954b0a80aab882522a88a4d9eae1cd # DV SDR
-          - 3497799d29a085e2ac2df9d468413c94 # HDR10
-          - 3e2c4e748b64a1a1118e0ea3f4cf6875 # HDR
-          - bb019e1cd00f304f80971c965de064dc # HDR (undefined)
-          - 2a7e3be05d3861d6df7171ec74cad727 # PQ
-          - 17e889ce13117940092308f48b48b45b # HLG
-          - 2016d1676f5ee13a5b7257ff86ac9a93 # SDR
-
-          # UHD Streaming
-          - 43b3cf48cb385cd3eac608ee6bca7f09 # UHD Streaming Boost
-          - d2d299244a92b8a52d4921ce3897a256 # UHD Streaming Cut
+          # HDR Formats (Current TRaSH Guides - January 2025)
+          - 505d871304820ba7106b693be6fe4a9e # HDR
+          - 7c3a61a9c6cb04f52f1544be6d44a026 # DV Boost
+          - 0c4b99df9206d2cfac3c05ab897dd62a # HDR10+ Boost
         assign_scores_to:
           - name: Recyclarr-2160p
+            score: 500 # HDR
+          - name: Recyclarr-2160p
+            score: 1000 # DV Boost
+          - name: Recyclarr-2160p
+            score: 100 # HDR10+ Boost
+
+      - trash_ids:
+          # Optional: DV without HDR10 fallback (negative score to avoid compatibility issues)
+          - 9b27ab6498ec0f31a3353992e19434ca # DV (w/o HDR fallback)
+        assign_scores_to:
+          - name: Recyclarr-2160p
+            score: -10000
 
     # Media naming using Plex conventions with TVDB
     media_naming:
