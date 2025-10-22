@@ -189,8 +189,8 @@ remove_default_profiles() {
 
     log_info "Removing default quality profiles from $service"
 
-    # Get all profiles
-    local profiles=$(get_quality_profiles "$service" "$port" "$api_key")
+    # Get all profiles (use tail -1 to get only JSON, not log messages)
+    local profiles=$(get_quality_profiles "$service" "$port" "$api_key" | tail -1)
 
     if [ -z "$profiles" ]; then
         log_error "Failed to get quality profiles from $service"
