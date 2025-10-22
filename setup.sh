@@ -1333,12 +1333,12 @@ if [[ $autoconfig_choice =~ ^[Yy]$ ]]; then
     echo ""
 
     if [ "$TRAEFIK_ENABLED" = true ]; then
-        wait_for_http_service "Traefik" "http://localhost:8080/api/version" 60 2
+        wait_for_http_service "Traefik" "http://localhost:${TRAEFIK_DASHBOARD_PORT}/api/version" 60 2
     fi
 
-    wait_for_http_service "Radarr" "http://localhost:7878" 60 2
-    wait_for_http_service "Sonarr" "http://localhost:8989" 60 2
-    wait_for_http_service "Prowlarr" "http://localhost:9696" 60 2
+    wait_for_http_service "Radarr" "http://localhost:${RADARR_PORT}" 60 2
+    wait_for_http_service "Sonarr" "http://localhost:${SONARR_PORT}" 60 2
+    wait_for_http_service "Prowlarr" "http://localhost:${PROWLARR_PORT}" 60 2
 
     # Skip Zilean wait - it can take 10-30 minutes to import DMM data on first run
     echo "Zilean starting in background (will import DMM data, can take 10-30 minutes)"
@@ -1375,22 +1375,22 @@ if [[ $autoconfig_choice =~ ^[Yy]$ ]]; then
     echo "  - Prowlarr: $PROWLARR_API_KEY"
 
         # Configure Radarr
-        RADARR_API_KEY=$(configure_arr_service "radarr" 7878 "movies" "decypharr" 8282 "$RADARR_API_KEY" | tail -1)
+        RADARR_API_KEY=$(configure_arr_service "radarr" "$RADARR_PORT" "movies" "decypharr" "$DECYPHARR_PORT" "$RADARR_API_KEY" | tail -1)
 
         # Configure Radarr authentication if enabled using atomic function
         if [ "$AUTH_ENABLED" = true ]; then
-            if ! configure_arr_authentication "Radarr" 7878 "$RADARR_API_KEY" "$AUTH_USERNAME" "$AUTH_PASSWORD"; then
+            if ! configure_arr_authentication "Radarr" "$RADARR_PORT" "$RADARR_API_KEY" "$AUTH_USERNAME" "$AUTH_PASSWORD"; then
                 log_error "Installation aborted - authentication configuration failed"
                 exit 1
             fi
         fi
 
         # Configure Sonarr
-        SONARR_API_KEY=$(configure_arr_service "sonarr" 8989 "tv" "decypharr" 8282 "$SONARR_API_KEY" | tail -1)
+        SONARR_API_KEY=$(configure_arr_service "sonarr" "$SONARR_PORT" "tv" "decypharr" "$DECYPHARR_PORT" "$SONARR_API_KEY" | tail -1)
 
         # Configure Sonarr authentication if enabled using atomic function
         if [ "$AUTH_ENABLED" = true ]; then
-            if ! configure_arr_authentication "Sonarr" 8989 "$SONARR_API_KEY" "$AUTH_USERNAME" "$AUTH_PASSWORD"; then
+            if ! configure_arr_authentication "Sonarr" "$SONARR_PORT" "$SONARR_API_KEY" "$AUTH_USERNAME" "$AUTH_PASSWORD"; then
                 log_error "Installation aborted - authentication configuration failed"
                 exit 1
             fi
@@ -1420,7 +1420,7 @@ if [[ $autoconfig_choice =~ ^[Yy]$ ]]; then
             "configContract": "CardigannSettings",
             "tags": []
         }'
-        api_post_request "http://localhost:9696/api/v1/indexer" "$PROWLARR_API_KEY" "$TORRENTIO_JSON"
+        api_post_request "http://localhost:${PROWLARR_PORT}/api/v1/indexer" "$PROWLARR_API_KEY" "$TORRENTIO_JSON"
         echo "  ✓ Indexer added: Torrentio"
 
         # Add Zilean indexer (disabled initially) using atomic function
@@ -1440,7 +1440,7 @@ if [[ $autoconfig_choice =~ ^[Yy]$ ]]; then
             "configContract": "CardigannSettings",
             "tags": []
         }'
-        api_post_request "http://localhost:9696/api/v1/indexer" "$PROWLARR_API_KEY" "$ZILEAN_JSON"
+        api_post_request "http://localhost:${PROWLARR_PORT}/api/v1/indexer" "$PROWLARR_API_KEY" "$ZILEAN_JSON"
         echo "  ✓ Indexer added: Zilean (disabled - enable after DMM data is indexed)"
 
         # Add The Pirate Bay indexer using atomic function
@@ -1460,7 +1460,7 @@ if [[ $autoconfig_choice =~ ^[Yy]$ ]]; then
             "configContract": "CardigannSettings",
             "tags": []
         }'
-        api_post_request "http://localhost:9696/api/v1/indexer" "$PROWLARR_API_KEY" "$TPB_JSON"
+        api_post_request "http://localhost:${PROWLARR_PORT}/api/v1/indexer" "$PROWLARR_API_KEY" "$TPB_JSON"
         echo "  ✓ Indexer added: The Pirate Bay"
 
         # Add YTS indexer using atomic function
@@ -1480,16 +1480,16 @@ if [[ $autoconfig_choice =~ ^[Yy]$ ]]; then
             "configContract": "CardigannSettings",
             "tags": []
         }'
-        api_post_request "http://localhost:9696/api/v1/indexer" "$PROWLARR_API_KEY" "$YTS_JSON"
+        api_post_request "http://localhost:${PROWLARR_PORT}/api/v1/indexer" "$PROWLARR_API_KEY" "$YTS_JSON"
         echo "  ✓ Indexer added: YTS"
 
         # Add Radarr and Sonarr as applications in Prowlarr
-        if ! add_arr_to_prowlarr "radarr" 7878 "$RADARR_API_KEY" 9696 "$PROWLARR_API_KEY"; then
+        if ! add_arr_to_prowlarr "radarr" "$RADARR_PORT" "$RADARR_API_KEY" "$PROWLARR_PORT" "$PROWLARR_API_KEY"; then
             log_error "Installation aborted - failed to add Radarr to Prowlarr"
             exit 1
         fi
 
-        if ! add_arr_to_prowlarr "sonarr" 8989 "$SONARR_API_KEY" 9696 "$PROWLARR_API_KEY"; then
+        if ! add_arr_to_prowlarr "sonarr" "$SONARR_PORT" "$SONARR_API_KEY" "$PROWLARR_PORT" "$PROWLARR_API_KEY"; then
             log_error "Installation aborted - failed to add Sonarr to Prowlarr"
             exit 1
         fi
@@ -1499,15 +1499,15 @@ if [[ $autoconfig_choice =~ ^[Yy]$ ]]; then
         echo "Triggering indexer sync to Radarr and Sonarr..."
 
         # Get Radarr app ID and trigger sync
-        if get_prowlarr_app_id 9696 "$PROWLARR_API_KEY" "Radarr" RADARR_APP_ID; then
-            if trigger_prowlarr_sync 9696 "$PROWLARR_API_KEY" "$RADARR_APP_ID"; then
+        if get_prowlarr_app_id "$PROWLARR_PORT" "$PROWLARR_API_KEY" "Radarr" RADARR_APP_ID; then
+            if trigger_prowlarr_sync "$PROWLARR_PORT" "$PROWLARR_API_KEY" "$RADARR_APP_ID"; then
                 echo "  ✓ Triggered sync to Radarr"
             fi
         fi
 
         # Get Sonarr app ID and trigger sync
-        if get_prowlarr_app_id 9696 "$PROWLARR_API_KEY" "Sonarr" SONARR_APP_ID; then
-            if trigger_prowlarr_sync 9696 "$PROWLARR_API_KEY" "$SONARR_APP_ID"; then
+        if get_prowlarr_app_id "$PROWLARR_PORT" "$PROWLARR_API_KEY" "Sonarr" SONARR_APP_ID; then
+            if trigger_prowlarr_sync "$PROWLARR_PORT" "$PROWLARR_API_KEY" "$SONARR_APP_ID"; then
                 echo "  ✓ Triggered sync to Sonarr"
             fi
         fi
@@ -1525,8 +1525,8 @@ if [[ $autoconfig_choice =~ ^[Yy]$ ]]; then
         echo ""
 
         # Delete default quality profiles
-        remove_default_profiles "radarr" 7878 "$RADARR_API_KEY"
-        remove_default_profiles "sonarr" 8989 "$SONARR_API_KEY"
+        remove_default_profiles "radarr" "$RADARR_PORT" "$RADARR_API_KEY"
+        remove_default_profiles "sonarr" "$SONARR_PORT" "$SONARR_API_KEY"
         echo ""
 
         # Run Recyclarr to create TRaSH Guide profiles using atomic function
@@ -1545,7 +1545,7 @@ if [[ $autoconfig_choice =~ ^[Yy]$ ]]; then
 
         # Configure Prowlarr authentication if enabled using atomic function
         if [ "$AUTH_ENABLED" = true ]; then
-            if ! configure_arr_authentication "Prowlarr" 9696 "$PROWLARR_API_KEY" "$AUTH_USERNAME" "$AUTH_PASSWORD"; then
+            if ! configure_arr_authentication "Prowlarr" "$PROWLARR_PORT" "$PROWLARR_API_KEY" "$AUTH_USERNAME" "$AUTH_PASSWORD"; then
                 log_error "Failed to configure Prowlarr authentication (non-critical)"
             fi
         fi
