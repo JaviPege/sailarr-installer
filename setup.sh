@@ -689,7 +689,7 @@ echo "========================================="
 echo "Auto-Configuration via API"
 echo "========================================="
 echo ""
-read -p "Do you want to auto-configure Radarr, Sonarr, and Prowlarr? (requires docker) (y/n): " -r
+read -p "Do you want to auto-configure Radarr, Sonarr, and Prowlarr? (y/n): " -r
 echo ""
 
 if [[ $REPLY =~ ^[Yy]$ ]]; then
