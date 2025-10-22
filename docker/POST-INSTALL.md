@@ -57,7 +57,7 @@ When you reach the "Add Radarr Server" screen, fill in the following:
 | **Hostname or IP Address** | `http://radarr` | Use container name (no external IP needed) |
 | **Port** | `7878` | Default Radarr port |
 | **Use SSL** | ☐ Disabled | Not needed for internal communication |
-| **API Key** | `<RADARR_API_KEY>` | See note below |
+| **API Key** | (auto-filled below) | Automatically extracted from installation |
 | **URL Base** | (leave empty) | Not needed for default setup |
 | **Quality Profile** | `Recyclarr-Any` | Or choose `Recyclarr-1080p` / `Recyclarr-2160p` |
 | **Root Folder** | `/data/media/movies` | Should auto-populate after test |
@@ -68,11 +68,16 @@ When you reach the "Add Radarr Server" screen, fill in the following:
 | **Enable Automatic Search** | ☑ Enabled | Recommended |
 | **Tag Requests** | ☑ Enabled | Adds requester info to downloads |
 
-**Getting the Radarr API Key:**
+**Radarr API Key:**
+
+The installer displays the API key at the end of the installation. If you need to retrieve it:
+
 ```bash
-# Run this command on your server:
+# On your server:
 docker exec radarr cat /config/config.xml | grep -oP '(?<=<ApiKey>)[^<]+'
 ```
+
+Or find it in the installation summary printed at the end of `./setup.sh`.
 
 **Recommended Settings:**
 - **Quality Profile**:
@@ -101,26 +106,34 @@ Click **"Add Sonarr Server"** and fill in:
 | **Hostname or IP Address** | `http://sonarr` | Use container name |
 | **Port** | `8989` | Default Sonarr port |
 | **Use SSL** | ☐ Disabled | Not needed for internal communication |
-| **API Key** | `<SONARR_API_KEY>` | See note below |
+| **API Key** | (auto-filled below) | Automatically extracted from installation |
 | **URL Base** | (leave empty) | Not needed for default setup |
+| **Series Type** | `Standard` | For regular TV shows (not anime) |
 | **Quality Profile** | `Recyclarr-Any` | Or choose `Recyclarr-1080p` / `Recyclarr-2160p` |
 | **Root Folder** | `/data/media/tv` | Should auto-populate after test |
 | **Language Profile** | `English` | Default |
-| **Anime Quality Profile** | (optional) | Only if you watch anime |
-| **Anime Root Folder** | (optional) | Only if you watch anime |
-| **Anime Language Profile** | (optional) | Only if you watch anime |
-| **Season Folders** | ☑ Enabled | Recommended |
-| **Tags** | (leave empty) | Optional |
+| **Tags** | (leave empty) | Optional - test connection first to load |
+| **Anime Series Type** | (leave empty) | Only if you watch anime |
+| **Anime Quality Profile** | (leave empty) | Only if you watch anime |
+| **Anime Root Folder** | (leave empty) | Only if you watch anime |
+| **Anime Language Profile** | (leave empty) | Only if you watch anime |
+| **Anime Tags** | (leave empty) | Only if you watch anime |
+| **Season Folders** | ☑ Enabled | Recommended - organizes by season |
 | **External URL** | (leave empty) | Only needed for external access |
 | **Enable Scan** | ☑ Enabled | Recommended |
 | **Enable Automatic Search** | ☑ Enabled | Recommended |
 | **Tag Requests** | ☑ Enabled | Adds requester info to downloads |
 
-**Getting the Sonarr API Key:**
+**Sonarr API Key:**
+
+The installer displays the API key at the end of the installation. If you need to retrieve it:
+
 ```bash
-# Run this command on your server:
+# On your server:
 docker exec sonarr cat /config/config.xml | grep -oP '(?<=<ApiKey>)[^<]+'
 ```
+
+Or find it in the installation summary printed at the end of `./setup.sh`.
 
 **Before clicking "Add Server":**
 1. Click **"Test"** button to verify connection
