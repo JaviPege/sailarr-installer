@@ -185,6 +185,7 @@ MEDIACENTER_GID=$MEDIACENTER_GID
 # User IDs
 RCLONE_UID=${RCLONE_UID}
 SONARR_UID=${SONARR_UID}
+BAZARR_UID=${BAZARR_UID}
 RADARR_UID=${RADARR_UID}
 RECYCLARR_UID=${RECYCLARR_UID}
 PROWLARR_UID=${PROWLARR_UID}
@@ -634,6 +635,7 @@ show_installation_summary() {
     echo "-------------------"
     echo "  - rclone (UID: ${RCLONE_UID})"
     echo "  - sonarr (UID: ${SONARR_UID})"
+    echo "  - bazarr (UID: ${BAZARR_UID})"
     echo "  - radarr (UID: ${RADARR_UID})"
     echo "  - recyclarr (UID: ${RECYCLARR_UID})"
     echo "  - prowlarr (UID: ${PROWLARR_UID})"
@@ -649,7 +651,7 @@ show_installation_summary() {
     echo ""
     echo "DIRECTORIES TO BE CREATED"
     echo "-------------------------"
-    echo "  - ${ROOT_DIR}/config/{sonarr,radarr,recyclarr,prowlarr,overseerr,plex,autoscan,zilean,decypharr}-config"
+    echo "  - ${ROOT_DIR}/config/{sonarr,bazarr,radarr,recyclarr,prowlarr,overseerr,plex,autoscan,zilean,decypharr}-config"
     echo "  - ${ROOT_DIR}/data/symlinks/{radarr,sonarr}"
     echo "  - ${ROOT_DIR}/data/realdebrid-zurg"
     echo "  - ${ROOT_DIR}/data/media/{movies,tv}"
@@ -704,6 +706,7 @@ setup_core_users() {
     create_system_user "rclone" "$RCLONE_UID" "$MEDIACENTER_GID" "Rclone"
     create_system_user "radarr" "$RADARR_UID" "$MEDIACENTER_GID" "Radarr"
     create_system_user "sonarr" "$SONARR_UID" "$MEDIACENTER_GID" "Sonarr"
+    create_system_user "bazarr" "$BAZARR_UID" "$MEDIACENTER_GID" "Bazarr"
     create_system_user "prowlarr" "$PROWLARR_UID" "$MEDIACENTER_GID" "Prowlarr"
     create_system_user "decypharr" "$DECYPHARR_UID" "$MEDIACENTER_GID" "Decypharr"
     create_system_user "zilean" "$ZILEAN_UID" "$MEDIACENTER_GID" "Zilean"
@@ -720,6 +723,7 @@ setup_core_directories() {
     # Config directories for CORE services
     create_folder "${ROOT_DIR}/config/radarr-config" "$INSTALL_UID:mediacenter" "775"
     create_folder "${ROOT_DIR}/config/sonarr-config" "$INSTALL_UID:mediacenter" "775"
+    create_folder "${ROOT_DIR}/config/bazarr-config" "$INSTALL_UID:mediacenter" "775"
     create_folder "${ROOT_DIR}/config/prowlarr-config" "$INSTALL_UID:mediacenter" "775"
     create_folder "${ROOT_DIR}/config/decypharr-config" "$INSTALL_UID:mediacenter" "775"
     create_folder "${ROOT_DIR}/config/zilean-config" "$INSTALL_UID:mediacenter" "775"
@@ -746,6 +750,7 @@ setup_core_permissions() {
     # CORE service permissions
     set_permissions "${ROOT_DIR}/config/radarr-config" "" "radarr:mediacenter"
     set_permissions "${ROOT_DIR}/config/sonarr-config" "" "sonarr:mediacenter"
+    set_permissions "${ROOT_DIR}/config/bazarr-config" "" "bazarr:mediacenter"
     set_permissions "${ROOT_DIR}/config/prowlarr-config" "" "prowlarr:mediacenter"
     set_permissions "${ROOT_DIR}/config/decypharr-config" "" "decypharr:mediacenter"
 
@@ -823,7 +828,7 @@ start_core_services() {
     # Start CORE services only
     docker compose up -d \
         zurg rclone decypharr \
-        radarr sonarr prowlarr \
+        radarr sonarr bazarr prowlarr \
         zilean zilean-postgres
 
     log_success "Core services started successfully"
@@ -840,6 +845,7 @@ configure_core_services() {
 
     wait_for_http_service "Radarr" "http://localhost:${RADARR_PORT}" 60 2
     wait_for_http_service "Sonarr" "http://localhost:${SONARR_PORT}" 60 2
+    wait_for_http_service "Bazarr" "http://localhost:${BAZARR_PORT}" 60 2
     wait_for_http_service "Prowlarr" "http://localhost:${PROWLARR_PORT}" 60 2
     wait_for_http_service "Decypharr" "http://localhost:${DECYPHARR_PORT}" 60 2
 
@@ -1147,6 +1153,7 @@ If disabled, services will be accessible via their direct ports." \
     declare -A USERS=(
         ["RCLONE_UID"]="rclone"
         ["SONARR_UID"]="sonarr"
+        ["BAZARR_UID"]="bazarr"
         ["RADARR_UID"]="radarr"
         ["RECYCLARR_UID"]="recyclarr"
         ["PROWLARR_UID"]="prowlarr"
@@ -1231,6 +1238,7 @@ echo "Creating directory structure..."
 
 # Config directories for each service
 create_folder "${ROOT_DIR}/config/sonarr-config" "$INSTALL_UID:mediacenter" "775"
+create_folder "${ROOT_DIR}/config/bazarr-config" "$INSTALL_UID:mediacenter" "775"
 create_folder "${ROOT_DIR}/config/radarr-config" "$INSTALL_UID:mediacenter" "775"
 create_folder "${ROOT_DIR}/config/recyclarr-config" "$INSTALL_UID:mediacenter" "775"
 create_folder "${ROOT_DIR}/config/prowlarr-config" "$INSTALL_UID:mediacenter" "775"
@@ -1257,6 +1265,7 @@ echo "Setting permissions..."
 set_permissions "${ROOT_DIR}/data/" "a=,a+rX,u+w,g+w" "$INSTALL_UID:mediacenter"
 set_permissions "${ROOT_DIR}/config/" "a=,a+rX,u+w,g+w" "$INSTALL_UID:mediacenter"
 set_permissions "${ROOT_DIR}/config/sonarr-config" "" "sonarr:mediacenter"
+set_permissions "${ROOT_DIR}/config/bazarr-config" "" "bazarr:mediacenter"
 set_permissions "${ROOT_DIR}/config/radarr-config" "" "radarr:mediacenter"
 set_permissions "${ROOT_DIR}/config/recyclarr-config" "" "recyclarr:mediacenter"
 set_permissions "${ROOT_DIR}/config/prowlarr-config" "" "prowlarr:mediacenter"
@@ -1458,7 +1467,7 @@ echo ""
 echo "========================================="
 echo "Mount Healthcheck Auto-Repair System"
 echo "========================================="
-echo "This system monitors if containers (Radarr, Sonarr, Decypharr, Plex) can access"
+echo "This system monitors if containers (Radarr, Sonarr, Bazarr, Decypharr, Plex) can access"
 echo "the rclone mount and automatically restarts them if they lose access."
 echo ""
 
@@ -1567,6 +1576,7 @@ if [[ $autoconfig_choice =~ ^[Yy]$ ]]; then
         "prowlarr"
         "radarr"
         "sonarr"
+        "bazarr"
         "overseerr"
         "plex"
         "zilean"
@@ -1664,6 +1674,7 @@ if [[ $autoconfig_choice =~ ^[Yy]$ ]]; then
     fi
 
     wait_for_http_service "Radarr" "http://localhost:${RADARR_PORT}" 60 2
+    wait_for_http_service "Bazarr" "http://localhost:${BAZARR_PORT}" 60 2
     wait_for_http_service "Sonarr" "http://localhost:${SONARR_PORT}" 60 2
     wait_for_http_service "Prowlarr" "http://localhost:${PROWLARR_PORT}" 60 2
 
@@ -1890,6 +1901,7 @@ if [[ $autoconfig_choice =~ ^[Yy]$ ]]; then
 # API Keys (auto-generated during setup)
 RADARR_API_KEY=$RADARR_API_KEY
 SONARR_API_KEY=$SONARR_API_KEY
+BAZARR_API_KEY=$SONARR_API_KEY
 PROWLARR_API_KEY=$PROWLARR_API_KEY"
         append_to_file "$DOCKER_DIR/.env.install" "$API_KEYS_CONTENT"
 
@@ -1955,6 +1967,7 @@ echo "SERVICES REQUIRING MANUAL CONFIGURATION:"
 echo "  • Plex - Add media libraries (/data/media/movies, /data/media/tv)"
 echo "  • Overseerr - Connect to Plex and Radarr/Sonarr (optional)"
 echo "  • Prowlarr - Add more indexers if needed (optional)"
+echo "  • Bazarr - Configure languages profiles and providers"
 echo ""
 echo "IMPORTANT - ZILEAN INDEXER:"
 echo "  ⚠ Zilean may take 10-30 minutes to import DMM data on first run"
@@ -1970,12 +1983,14 @@ if [ "$TRAEFIK_ENABLED" = true ]; then
     echo "   • Radarr:    http://radarr.${DOMAIN_NAME}    (already configured!)"
     echo "   • Sonarr:    http://sonarr.${DOMAIN_NAME}    (already configured!)"
     echo "   • Overseerr: http://overseerr.${DOMAIN_NAME}"
+    echo "   • Bazarr:    http://bazarr.${DOMAIN_NAME}"
     echo "   • Plex:      http://${DOMAIN_NAME}:32400/web"
 else
     echo "   • Prowlarr:  http://${DOMAIN_NAME}:9696  (already configured!)"
     echo "   • Radarr:    http://${DOMAIN_NAME}:7878  (already configured!)"
     echo "   • Sonarr:    http://${DOMAIN_NAME}:8989  (already configured!)"
     echo "   • Overseerr: http://${DOMAIN_NAME}:5055"
+    echo "   • Bazarr:    http://${DOMAIN_NAME}:6767"
     echo "   • Plex:      http://${DOMAIN_NAME}:32400/web"
 fi
 echo ""
@@ -1995,6 +2010,7 @@ echo ""
 echo "   API KEYS FOR OVERSEERR CONFIGURATION:"
 echo "   • Radarr API Key: ${RADARR_API_KEY}"
 echo "   • Sonarr API Key: ${SONARR_API_KEY}"
+echo "   • Bazarr API Key: ${BAZARR_API_KEY}"
 echo "   • Prowlarr API Key: ${PROWLARR_API_KEY}"
 echo ""
 echo "   PINCHFLAT - Configure YouTube downloads (optional)"

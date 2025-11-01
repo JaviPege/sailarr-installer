@@ -87,6 +87,7 @@ setup_mediacenter_users() {
     local rclone_uid=$(find_available_uid $base_uid)
     local sonarr_uid=$(find_available_uid $((rclone_uid + 1)))
     local radarr_uid=$(find_available_uid $((sonarr_uid + 1)))
+    local bazarr_uid=$(find_available_uid $((bazarr_uid + 1)))
     local recyclarr_uid=$(find_available_uid $((radarr_uid + 1)))
     local prowlarr_uid=$(find_available_uid $((recyclarr_uid + 1)))
     local overseerr_uid=$(find_available_uid $((prowlarr_uid + 1)))
@@ -107,6 +108,7 @@ setup_mediacenter_users() {
     create_system_user "rclone" "$rclone_uid" "$mediacenter_gid" "Rclone"
     create_system_user "sonarr" "$sonarr_uid" "$mediacenter_gid" "Sonarr"
     create_system_user "radarr" "$radarr_uid" "$mediacenter_gid" "Radarr"
+    create_system_user "bazarr" "$bazarr_uid" "$mediacenter_gid" "Bazarr"
     create_system_user "recyclarr" "$recyclarr_uid" "$mediacenter_gid" "Recyclarr"
     create_system_user "prowlarr" "$prowlarr_uid" "$mediacenter_gid" "Prowlarr"
     create_system_user "overseerr" "$overseerr_uid" "$mediacenter_gid" "Overseerr"
@@ -125,6 +127,7 @@ setup_mediacenter_users() {
     export RCLONE_UID=$rclone_uid
     export SONARR_UID=$sonarr_uid
     export RADARR_UID=$radarr_uid
+    export BAZARR_UID=$bazarr_uid
     export RECYCLARR_UID=$recyclarr_uid
     export PROWLARR_UID=$prowlarr_uid
     export OVERSEERR_UID=$overseerr_uid
