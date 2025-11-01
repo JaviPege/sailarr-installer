@@ -188,7 +188,7 @@ if [ "$SKIP_CONFIGURATION" = false ]; then
         ["RADARR_UID"]="radarr"
         ["RECYCLARR_UID"]="recyclarr"
         ["PROWLARR_UID"]="prowlarr"
-        ["OVERSEERR_UID"]="overseerr"
+        ["SEERR_UID"]="seerr"
         ["PLEX_UID"]="plex"
         ["DECYPHARR_UID"]="decypharr"
         ["AUTOSCAN_UID"]="autoscan"
@@ -293,7 +293,7 @@ SONARR_UID=${SONARR_UID}
 RADARR_UID=${RADARR_UID}
 RECYCLARR_UID=${RECYCLARR_UID}
 PROWLARR_UID=${PROWLARR_UID}
-OVERSEERR_UID=${OVERSEERR_UID}
+SEERR_UID=${SEERR_UID}
 PLEX_UID=${PLEX_UID}
 DECYPHARR_UID=${DECYPHARR_UID}
 AUTOSCAN_UID=${AUTOSCAN_UID}
@@ -347,7 +347,7 @@ echo "  - sonarr (UID: ${SONARR_UID})"
 echo "  - radarr (UID: ${RADARR_UID})"
 echo "  - recyclarr (UID: ${RECYCLARR_UID})"
 echo "  - prowlarr (UID: ${PROWLARR_UID})"
-echo "  - overseerr (UID: ${OVERSEERR_UID})"
+echo "  - seerr (UID: ${SEERR_UID})"
 echo "  - plex (UID: ${PLEX_UID})"
 echo "  - decypharr (UID: ${DECYPHARR_UID})"
 echo "  - autoscan (UID: ${AUTOSCAN_UID})"
@@ -359,7 +359,7 @@ echo "  - mediacenter (GID: ${MEDIACENTER_GID})"
 echo ""
 echo "DIRECTORIES TO BE CREATED"
 echo "-------------------------"
-echo "  - ${ROOT_DIR}/config/{sonarr,radarr,recyclarr,prowlarr,overseerr,plex,autoscan,zilean,decypharr}-config"
+echo "  - ${ROOT_DIR}/config/{sonarr,radarr,recyclarr,prowlarr,seerr,plex,autoscan,zilean,decypharr}-config"
 echo "  - ${ROOT_DIR}/data/symlinks/{radarr,sonarr}"
 echo "  - ${ROOT_DIR}/data/realdebrid-zurg"
 echo "  - ${ROOT_DIR}/data/media/{movies,tv}"
@@ -414,7 +414,7 @@ add_user_to_group $USER mediacenter
 # Create directories
 echo ""
 echo "Creating directory structure..."
-sudo mkdir -pv "${ROOT_DIR}/config"/{sonarr,radarr,recyclarr,prowlarr,overseerr,plex,autoscan,zilean,decypharr,pinchflat}-config
+sudo mkdir -pv "${ROOT_DIR}/config"/{sonarr,radarr,recyclarr,prowlarr,seerr,plex,autoscan,zilean,decypharr,pinchflat}-config
 sudo mkdir -pv "${ROOT_DIR}/data/symlinks"/{radarr,sonarr}
 sudo mkdir -pv "${ROOT_DIR}/data/realdebrid-zurg"
 sudo mkdir -pv "${ROOT_DIR}/data/media"/{movies,tv}
@@ -432,7 +432,7 @@ sudo chown -R sonarr:mediacenter ${ROOT_DIR}/config/sonarr-config
 sudo chown -R radarr:mediacenter ${ROOT_DIR}/config/radarr-config
 sudo chown -R recyclarr:mediacenter ${ROOT_DIR}/config/recyclarr-config
 sudo chown -R prowlarr:mediacenter ${ROOT_DIR}/config/prowlarr-config
-sudo chown -R overseerr:mediacenter ${ROOT_DIR}/config/overseerr-config
+sudo chown -R seerr:mediacenter ${ROOT_DIR}/config/seerr-config
 sudo chown -R plex:mediacenter ${ROOT_DIR}/config/plex-config
 sudo chown -R decypharr:mediacenter ${ROOT_DIR}/config/decypharr-config
 sudo chown -R autoscan:mediacenter ${ROOT_DIR}/config/autoscan-config
@@ -740,7 +740,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
         "prowlarr"
         "radarr"
         "sonarr"
-        "overseerr"
+        "seerr"
         "plex"
         "zilean"
         "zilean-postgres"
@@ -1215,7 +1215,7 @@ echo "  ✓ Recyclarr - Quality profiles and naming conventions from TRaSH Guide
 echo ""
 echo "SERVICES REQUIRING MANUAL CONFIGURATION:"
 echo "  • Plex - Add media libraries (/data/media/movies, /data/media/tv)"
-echo "  • Overseerr - Connect to Plex and Radarr/Sonarr (optional)"
+echo "  • Seerr - Connect to Plex and Radarr/Sonarr (optional)"
 echo "  • Prowlarr - Add more indexers if needed (optional)"
 echo ""
 echo "IMPORTANT - ZILEAN INDEXER:"
@@ -1231,13 +1231,13 @@ if [ "$TRAEFIK_ENABLED" = true ]; then
     echo "   • Prowlarr:  http://prowlarr.${DOMAIN_NAME}  (already configured!)"
     echo "   • Radarr:    http://radarr.${DOMAIN_NAME}    (already configured!)"
     echo "   • Sonarr:    http://sonarr.${DOMAIN_NAME}    (already configured!)"
-    echo "   • Overseerr: http://overseerr.${DOMAIN_NAME}"
+    echo "   • Seerr: http://seerr.${DOMAIN_NAME}"
     echo "   • Plex:      http://${DOMAIN_NAME}:32400/web"
 else
     echo "   • Prowlarr:  http://${DOMAIN_NAME}:9696  (already configured!)"
     echo "   • Radarr:    http://${DOMAIN_NAME}:7878  (already configured!)"
     echo "   • Sonarr:    http://${DOMAIN_NAME}:8989  (already configured!)"
-    echo "   • Overseerr: http://${DOMAIN_NAME}:5055"
+    echo "   • Seerr: http://${DOMAIN_NAME}:5055"
     echo "   • Plex:      http://${DOMAIN_NAME}:32400/web"
 fi
 echo ""
@@ -1248,13 +1248,13 @@ echo "   • Movies: /data/media/movies"
 echo "   • TV Shows: /data/media/tv"
 echo "   • YouTube: /data/media/youtube"
 echo ""
-echo "   OVERSEERR - Connect to Plex and Radarr/Sonarr:"
+echo "   SEERR - Connect to Plex and Radarr/Sonarr:"
 echo "   • Sign in with Plex account"
 echo "   • Add Radarr and Sonarr with their API keys (see below)"
 echo "   • Configure quality profiles and root folders"
 echo "   • Detailed guide: docker/POST-INSTALL.md"
 echo ""
-echo "   API KEYS FOR OVERSEERR CONFIGURATION:"
+echo "   API KEYS FOR SEERR CONFIGURATION:"
 echo "   • Radarr API Key: ${RADARR_API_KEY}"
 echo "   • Sonarr API Key: ${SONARR_API_KEY}"
 echo "   • Prowlarr API Key: ${PROWLARR_API_KEY}"

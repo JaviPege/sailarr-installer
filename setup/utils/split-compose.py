@@ -17,7 +17,7 @@ output_dir.mkdir(exist_ok=True)
 
 # Services to extract
 services_to_extract = {
-    'overseerr': 'overseerr.yml',
+    'seerr': 'seerr.yml',
     'prowlarr': 'prowlarr.yml',
     'radarr': 'radarr.yml',
     'sonarr': 'sonarr.yml',
@@ -48,7 +48,7 @@ for service_name, filename in services_to_extract.items():
         
         # Create service description
         descriptions = {
-            'overseerr': 'Overseerr - Request Management',
+            'seerr': 'Seerr - Request Management',
             'prowlarr': 'Prowlarr - Indexer Management',
             'radarr': 'Radarr - Movie Management',
             'sonarr': 'Sonarr - TV Show Management',
@@ -85,4 +85,4 @@ for service_name, filename in services_to_extract.items():
 
 print("\nAll services have been split into individual files!")
 print("You can now use: docker compose up -d")
-print("Or for specific services: docker compose up -d plex overseerr")
+print("Or for specific services: docker compose up -d plex seerr")

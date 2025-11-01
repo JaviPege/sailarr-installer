@@ -89,8 +89,8 @@ setup_mediacenter_users() {
     local radarr_uid=$(find_available_uid $((sonarr_uid + 1)))
     local recyclarr_uid=$(find_available_uid $((radarr_uid + 1)))
     local prowlarr_uid=$(find_available_uid $((recyclarr_uid + 1)))
-    local overseerr_uid=$(find_available_uid $((prowlarr_uid + 1)))
-    local plex_uid=$(find_available_uid $((overseerr_uid + 1)))
+    local seerr_uid=$(find_available_uid $((prowlarr_uid + 1)))
+    local plex_uid=$(find_available_uid $((seerr_uid + 1)))
     local decypharr_uid=$(find_available_uid $((plex_uid + 1)))
     local autoscan_uid=$(find_available_uid $((decypharr_uid + 1)))
     local pinchflat_uid=$(find_available_uid $((autoscan_uid + 1)))
@@ -109,7 +109,7 @@ setup_mediacenter_users() {
     create_system_user "radarr" "$radarr_uid" "$mediacenter_gid" "Radarr"
     create_system_user "recyclarr" "$recyclarr_uid" "$mediacenter_gid" "Recyclarr"
     create_system_user "prowlarr" "$prowlarr_uid" "$mediacenter_gid" "Prowlarr"
-    create_system_user "overseerr" "$overseerr_uid" "$mediacenter_gid" "Overseerr"
+    create_system_user "seerr" "$seerr_uid" "$mediacenter_gid" "Seerr"
     create_system_user "plex" "$plex_uid" "$mediacenter_gid" "Plex Media Server"
     create_system_user "decypharr" "$decypharr_uid" "$mediacenter_gid" "Decypharr"
     create_system_user "autoscan" "$autoscan_uid" "$mediacenter_gid" "Autoscan"
@@ -127,7 +127,7 @@ setup_mediacenter_users() {
     export RADARR_UID=$radarr_uid
     export RECYCLARR_UID=$recyclarr_uid
     export PROWLARR_UID=$prowlarr_uid
-    export OVERSEERR_UID=$overseerr_uid
+    export SEERR_UID=$seerr_uid
     export PLEX_UID=$plex_uid
     export DECYPHARR_UID=$decypharr_uid
     export AUTOSCAN_UID=$autoscan_uid

@@ -4,7 +4,7 @@ This guide covers the manual configuration steps required after running the auto
 
 ## Table of Contents
 
-1. [Overseerr Configuration](#overseerr-configuration)
+1. [Seerr Configuration](#seerr-configuration)
    - [Connect Plex Account](#1-connect-plex-account)
    - [Select Libraries](#2-select-libraries)
    - [Add Radarr Server](#3-add-radarr-server)
@@ -14,20 +14,20 @@ This guide covers the manual configuration steps required after running the auto
 
 ---
 
-## Overseerr Configuration
+## Seerr Configuration
 
-Overseerr is your media request management system that connects to Plex, Radarr, and Sonarr.
+Seerr is your media request management system that connects to Plex, Radarr, and Sonarr.
 
-### Access Overseerr
+### Access Seerr
 
 1. Open your browser and navigate to: `http://YOUR_SERVER_IP:5055`
-2. You'll be greeted with the Overseerr setup wizard
+2. You'll be greeted with the Seerr setup wizard
 
 ### 1. Connect Plex Account
 
 **Step 1: Sign in with Plex**
 - Click **"Sign in with Plex"**
-- Authorize Overseerr to access your Plex account
+- Authorize Seerr to access your Plex account
 - Select your Plex server from the list
 
 **Step 2: Server Configuration**
@@ -38,7 +38,7 @@ Overseerr is your media request management system that connects to Plex, Radarr,
 ### 2. Select Libraries
 
 **Step 3: Library Selection**
-- Enable the libraries you want Overseerr to manage:
+- Enable the libraries you want Seerr to manage:
   - ☑ **Movies** (your Plex Movies library)
   - ☑ **TV Shows** (your Plex TV Shows library)
 - Click **Continue**
@@ -143,10 +143,10 @@ Or find it in the installation summary printed at the end of `./setup.sh`.
 
 ### 5. Finish Setup
 
-**Step 6: Complete Overseerr Setup**
+**Step 6: Complete Seerr Setup**
 - Review your settings
 - Click **"Finish Setup"**
-- Overseerr is now ready to use!
+- Seerr is now ready to use!
 
 ---
 
@@ -186,7 +186,7 @@ No additional configuration needed unless you want to add more indexers.
 
 | Service | URL | Purpose |
 |---------|-----|---------|
-| **Overseerr** | `http://YOUR_SERVER_IP:5055` | Media requests |
+| **Seerr** | `http://YOUR_SERVER_IP:5055` | Media requests |
 | **Plex** | `http://YOUR_SERVER_IP:32400/web` | Media server |
 | **Radarr** | `http://YOUR_SERVER_IP:7878` | Movie management |
 | **Sonarr** | `http://YOUR_SERVER_IP:8989` | TV show management |
@@ -199,7 +199,7 @@ No additional configuration needed unless you want to add more indexers.
 
 ## Troubleshooting
 
-### Overseerr Can't Connect to Radarr/Sonarr
+### Seerr Can't Connect to Radarr/Sonarr
 
 **Problem**: Test button fails with connection error
 
@@ -225,7 +225,7 @@ No additional configuration needed unless you want to add more indexers.
 
 4. Check Docker network:
    ```bash
-   docker network inspect mediacenter | grep -A 5 overseerr
+   docker network inspect mediacenter | grep -A 5 seerr
    ```
 
 ### Quality Profiles Not Loading
@@ -272,7 +272,7 @@ If you encounter issues:
 
 1. Check service logs:
    ```bash
-   docker logs overseerr
+   docker logs seerr
    docker logs radarr
    docker logs sonarr
    ```
@@ -295,4 +295,4 @@ If you encounter issues:
 
 **Configuration complete!** 🎉
 
-You can now start requesting media through Overseerr. Movies and TV shows will be automatically downloaded and organized by Radarr/Sonarr.
+You can now start requesting media through Seerr. Movies and TV shows will be automatically downloaded and organized by Radarr/Sonarr.
