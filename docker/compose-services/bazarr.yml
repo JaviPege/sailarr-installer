@@ -1,0 +1,48 @@
+# Bazarr - Substitle Management
+
+services:
+  bazarr:
+    image: ${BAZARR_IMAGE}:${BAZARR_TAG}
+    env_file:
+      - ../.env.defaults
+      - ../.env.local
+    container_name: bazarr
+    cpus: 1.0
+    user: ${BAZARR_UID}:${MEDIACENTER_GID}
+    networks:
+      mediacenter:
+        ipv4_address: 172.30.0.22
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "--connect-timeout", "3", "http://localhost:6767/ping"]
+      interval: 5s
+      timeout: 4s
+      retries: 4
+      start_period: 5s
+    environment:
+    - PUID=${BAZARR_UID}
+    - PGID=${MEDIACENTER_GID}
+    - UMASK=002
+    - TZ=${TIMEZONE}
+    tmpfs:
+    - /tmp:mode=770,noexec,size=50M,uid=${BAZARR_UID},gid=${MEDIACENTER_GID}
+    - /logs:mode=770,size=100M,uid=${BAZARR_UID},gid=${MEDIACENTER_GID}
+    volumes:
+    - ${ROOT_DIR}/config/bazarr-config:/config
+    - ${ROOT_DIR}/data:/data
+    ports:
+    - ${BAZARR_PORT}:6767
+    restart: on-failure:5
+    logging:
+      driver: local
+      options:
+        max-file: '5'
+        max-size: 10m
+    labels:
+    - traefik.enable=true
+    - traefik.http.routers.bazarr.rule=Host(`${BAZARR_TRAEFIK_NAME}.${DOMAIN_NAME}`)
+    - traefik.http.routers.bazarr.entrypoints=web
+    - traefik.http.services.bazarr.loadbalancer.server.port=6767
+    depends_on:
+      prowlarr:
+        condition: service_healthy
+        restart: true

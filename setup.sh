@@ -111,7 +111,7 @@ if [ "$SKIP_CONFIGURATION" = false ]; then
     # Ask for authentication credentials (optional)
     echo "Service Authentication (Optional)"
     echo "----------------------------------"
-    echo "Configure username/password for Radarr, Sonarr, and Prowlarr web UI."
+    echo "Configure username/password for Radarr, Sonarr, Bazarr, and Prowlarr web UI."
     echo "Leave empty to skip and configure manually later."
     read -p "Do you want to configure authentication? (y/n): " -r
     echo ""
@@ -186,6 +186,7 @@ if [ "$SKIP_CONFIGURATION" = false ]; then
         ["RCLONE_UID"]="rclone"
         ["SONARR_UID"]="sonarr"
         ["RADARR_UID"]="radarr"
+        ["BAZARR_UID"]="bazarr"
         ["RECYCLARR_UID"]="recyclarr"
         ["PROWLARR_UID"]="prowlarr"
         ["OVERSEERR_UID"]="overseerr"
@@ -291,6 +292,7 @@ MEDIACENTER_GID=$MEDIACENTER_GID
 RCLONE_UID=${RCLONE_UID}
 SONARR_UID=${SONARR_UID}
 RADARR_UID=${RADARR_UID}
+BAZARR_UID=${BAZARR_UID}
 RECYCLARR_UID=${RECYCLARR_UID}
 PROWLARR_UID=${PROWLARR_UID}
 OVERSEERR_UID=${OVERSEERR_UID}
@@ -345,6 +347,7 @@ echo "-------------------"
 echo "  - rclone (UID: ${RCLONE_UID})"
 echo "  - sonarr (UID: ${SONARR_UID})"
 echo "  - radarr (UID: ${RADARR_UID})"
+echo "  - bazarr (UID: ${BAZARR_UID})"
 echo "  - recyclarr (UID: ${RECYCLARR_UID})"
 echo "  - prowlarr (UID: ${PROWLARR_UID})"
 echo "  - overseerr (UID: ${OVERSEERR_UID})"
@@ -359,7 +362,7 @@ echo "  - mediacenter (GID: ${MEDIACENTER_GID})"
 echo ""
 echo "DIRECTORIES TO BE CREATED"
 echo "-------------------------"
-echo "  - ${ROOT_DIR}/config/{sonarr,radarr,recyclarr,prowlarr,overseerr,plex,autoscan,zilean,decypharr}-config"
+echo "  - ${ROOT_DIR}/config/{sonarr,radarr,bazarr,recyclarr,prowlarr,overseerr,plex,autoscan,zilean,decypharr}-config"
 echo "  - ${ROOT_DIR}/data/symlinks/{radarr,sonarr}"
 echo "  - ${ROOT_DIR}/data/realdebrid-zurg"
 echo "  - ${ROOT_DIR}/data/media/{movies,tv}"
@@ -414,7 +417,7 @@ add_user_to_group $USER mediacenter
 # Create directories
 echo ""
 echo "Creating directory structure..."
-sudo mkdir -pv "${ROOT_DIR}/config"/{sonarr,radarr,recyclarr,prowlarr,overseerr,plex,autoscan,zilean,decypharr,pinchflat}-config
+sudo mkdir -pv "${ROOT_DIR}/config"/{sonarr,radarr,bazarr,recyclarr,prowlarr,overseerr,plex,autoscan,zilean,decypharr,pinchflat}-config
 sudo mkdir -pv "${ROOT_DIR}/data/symlinks"/{radarr,sonarr}
 sudo mkdir -pv "${ROOT_DIR}/data/realdebrid-zurg"
 sudo mkdir -pv "${ROOT_DIR}/data/media"/{movies,tv}
@@ -429,7 +432,9 @@ sudo chmod -R a=,a+rX,u+w,g+w ${ROOT_DIR}/config/
 sudo chown -R $INSTALL_UID:mediacenter ${ROOT_DIR}/data/
 sudo chown -R $INSTALL_UID:mediacenter ${ROOT_DIR}/config/
 sudo chown -R sonarr:mediacenter ${ROOT_DIR}/config/sonarr-config
+sudo chown -R sonarr:mediacenter ${ROOT_DIR}/config/sonarr-config
 sudo chown -R radarr:mediacenter ${ROOT_DIR}/config/radarr-config
+sudo chown -R bazarr:mediacenter ${ROOT_DIR}/config/bazarr-config
 sudo chown -R recyclarr:mediacenter ${ROOT_DIR}/config/recyclarr-config
 sudo chown -R prowlarr:mediacenter ${ROOT_DIR}/config/prowlarr-config
 sudo chown -R overseerr:mediacenter ${ROOT_DIR}/config/overseerr-config
@@ -635,7 +640,7 @@ echo ""
 echo "========================================="
 echo "Mount Healthcheck Auto-Repair System"
 echo "========================================="
-echo "This system monitors if containers (Radarr, Sonarr, Decypharr, Plex) can access"
+echo "This system monitors if containers (Radarr, Sonarr, Bazarr, Decypharr, Plex) can access"
 echo "the rclone mount and automatically restarts them if they lose access."
 echo ""
 read -p "Do you want to install the mount healthcheck auto-repair system? (y/n): " -r
@@ -689,7 +694,7 @@ echo "========================================="
 echo "Auto-Configuration via API"
 echo "========================================="
 echo ""
-read -p "Do you want to auto-configure Radarr, Sonarr, and Prowlarr? (y/n): " -r
+read -p "Do you want to auto-configure Radarr, Sonarr, Bazarr, and Prowlarr? (y/n): " -r
 echo ""
 
 if [[ $REPLY =~ ^[Yy]$ ]]; then
@@ -740,6 +745,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
         "prowlarr"
         "radarr"
         "sonarr"
+        "bazarr"
         "overseerr"
         "plex"
         "zilean"
@@ -844,6 +850,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 
     wait_for_service "Radarr" "http://localhost:7878"
     wait_for_service "Sonarr" "http://localhost:8989"
+    wait_for_service "Bazarr" "http://localhost:6767"
     wait_for_service "Prowlarr" "http://localhost:9696"
 
     # Skip Zilean wait - it can take 10-30 minutes to import DMM data on first run
@@ -867,13 +874,15 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     # Extract API keys using library function
     RADARR_API_KEY=$(extract_api_key "radarr" | tail -1)
     SONARR_API_KEY=$(extract_api_key "sonarr" | tail -1)
+    BAZARR_API_KEY=$(extract_api_key "bazarr" | tail -1)
     PROWLARR_API_KEY=$(extract_api_key "prowlarr" | tail -1)
 
-    if [ -z "$RADARR_API_KEY" ] || [ -z "$SONARR_API_KEY" ] || [ -z "$PROWLARR_API_KEY" ]; then
+    if [ -z "$RADARR_API_KEY" ] || [ -z "$SONARR_API_KEY" ] || [ -z "$BAZARR_API_KEY" ] || [ -z "$PROWLARR_API_KEY" ]; then
         log_error "Failed to retrieve API keys. Services may not be fully initialized."
         log_error "Missing API keys:"
         [ -z "$RADARR_API_KEY" ] && log_error "  - Radarr API key is empty"
         [ -z "$SONARR_API_KEY" ] && log_error "  - Sonarr API key is empty"
+        [ -z "$BAZARR_API_KEY" ] && log_error "  - Sonarr API key is empty"
         [ -z "$PROWLARR_API_KEY" ] && log_error "  - Prowlarr API key is empty"
         log_error "Check service logs: docker logs radarr | docker logs sonarr | docker logs prowlarr"
         log_error "Installation aborted - cannot continue without API keys"
@@ -883,6 +892,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
     log_success "API keys retrieved"
     echo "  - Radarr:   $RADARR_API_KEY"
     echo "  - Sonarr:   $SONARR_API_KEY"
+    echo "  - Bazarr:   $BAZARR_API_KEY"
     echo "  - Prowlarr: $PROWLARR_API_KEY"
 
         # Configure Radarr
@@ -953,6 +963,43 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
                 echo "  ✓ Sonarr authentication configured (HTTP $HTTP_CODE)"
             else
                 log_error "Failed to configure Sonarr authentication (HTTP $HTTP_CODE)"
+                log_error "Response: $(echo "$RESPONSE" | head -n -1)"
+                log_error "Installation aborted - authentication configuration failed"
+                exit 1
+            fi
+        fi
+
+        # Configure Bazarr
+        BAZARR_API_KEY=$(configure_arr_service "bazarr" 6767 "subtitles" "decypharr" 8282 "$BAZARR_API_KEY" | tail -1)
+
+        # Configure Bazarr authentication if enabled
+        if [ "$AUTH_ENABLED" = true ]; then
+            echo "  ⟳ Configuring Bazarr authentication..."
+
+            # Get current config
+            CONFIG=$(curl -s "http://localhost:6767/api/system/settings" -H "X-Api-Key: $BAZARR_API_KEY")
+            if [ -z "$CONFIG" ]; then
+                log_error "Failed to get Bazarr config for authentication setup"
+                log_error "Installation aborted - cannot configure authentication"
+                exit 1
+            fi
+
+            # Update authentication settings
+            UPDATED_CONFIG=$(echo "$CONFIG" | jq --arg user "$AUTH_USERNAME" --arg pass "$AUTH_PASSWORD" \
+                '.auth.type = "form" | .auth.username = $user | .auth.password = $pass')
+
+            # Send update and capture response with HTTP code
+            RESPONSE=$(curl -s -w '\n%{http_code}' -X POST "http://localhost:6767/api/system/settings" \
+                -H "X-Api-Key: $BAZARR_API_KEY" \
+                -H "Content-Type: application/json" \
+                -d "$UPDATED_CONFIG")
+
+            HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+
+            if [[ "$HTTP_CODE" =~ ^2 ]]; then
+                echo "  ✓ Bazarr authentication configured (HTTP $HTTP_CODE)"
+            else
+                log_error "Failed to configure Bazarr authentication (HTTP $HTTP_CODE)"
                 log_error "Response: $(echo "$RESPONSE" | head -n -1)"
                 log_error "Installation aborted - authentication configuration failed"
                 exit 1
@@ -1157,6 +1204,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
         echo "# API Keys (auto-generated during setup)" >> "$DOCKER_DIR/.env.install"
         echo "RADARR_API_KEY=$RADARR_API_KEY" >> "$DOCKER_DIR/.env.install"
         echo "SONARR_API_KEY=$SONARR_API_KEY" >> "$DOCKER_DIR/.env.install"
+        echo "BAZARR_API_KEY=$BAZARR_API_KEY" >> "$DOCKER_DIR/.env.install"
         echo "PROWLARR_API_KEY=$PROWLARR_API_KEY" >> "$DOCKER_DIR/.env.install"
 
         echo ""
@@ -1217,6 +1265,7 @@ echo "SERVICES REQUIRING MANUAL CONFIGURATION:"
 echo "  • Plex - Add media libraries (/data/media/movies, /data/media/tv)"
 echo "  • Overseerr - Connect to Plex and Radarr/Sonarr (optional)"
 echo "  • Prowlarr - Add more indexers if needed (optional)"
+echo "  • Bazarr - Configure languages profiles and providers"
 echo ""
 echo "IMPORTANT - ZILEAN INDEXER:"
 echo "  ⚠ Zilean may take 10-30 minutes to import DMM data on first run"
@@ -1232,12 +1281,14 @@ if [ "$TRAEFIK_ENABLED" = true ]; then
     echo "   • Radarr:    http://radarr.${DOMAIN_NAME}    (already configured!)"
     echo "   • Sonarr:    http://sonarr.${DOMAIN_NAME}    (already configured!)"
     echo "   • Overseerr: http://overseerr.${DOMAIN_NAME}"
+    echo "   • Bazarr:    http://bazarr.${DOMAIN_NAME}"
     echo "   • Plex:      http://${DOMAIN_NAME}:32400/web"
 else
     echo "   • Prowlarr:  http://${DOMAIN_NAME}:9696  (already configured!)"
     echo "   • Radarr:    http://${DOMAIN_NAME}:7878  (already configured!)"
     echo "   • Sonarr:    http://${DOMAIN_NAME}:8989  (already configured!)"
     echo "   • Overseerr: http://${DOMAIN_NAME}:5055"
+    echo "   • Bazarr:    http://${DOMAIN_NAME}:6767"
     echo "   • Plex:      http://${DOMAIN_NAME}:32400/web"
 fi
 echo ""

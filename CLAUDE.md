@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Sailarr Installer is an automated Docker-based media streaming stack that leverages Real-Debrid and the *Arr ecosystem to create an "infinite" media library. This is a microservices architecture project using Docker Compose to orchestrate multiple services including Plex, Overseerr, Radarr, Sonarr, Prowlarr, Zilean, Zurg, Decypharr, Recyclarr, Autoscan, Tautulli, Homarr, Pinchflat, PlexTraktSync, and Watchtower.
+Sailarr Installer is an automated Docker-based media streaming stack that leverages Real-Debrid and the *Arr ecosystem to create an "infinite" media library. This is a microservices architecture project using Docker Compose to orchestrate multiple services including Plex, Overseerr, Radarr, Sonarr, Bazarr, Prowlarr, Zilean, Zurg, Decypharr, Recyclarr, Autoscan, Tautulli, Homarr, Pinchflat, PlexTraktSync, and Watchtower.
 
 ## Essential Commands
 
@@ -48,6 +48,7 @@ docker ps -a
 # View specific service logs
 docker logs radarr
 docker logs sonarr
+docker logs bazarr
 docker logs zurg
 
 # Monitor container resources
@@ -81,6 +82,7 @@ The system uses a **symlink-based architecture** optimized for hardlinking:
 - **Radarr** - Movie management (port 7878)
 - **Sonarr** - TV show management (port 8989)
 - **Prowlarr** - Indexer manager (port 9696)
+- **Bazarr** - Substitles management (port 6767)
 
 **Download & Storage:**
 - **Zurg** - Real-Debrid WebDAV interface (port 9999)
@@ -111,6 +113,7 @@ ${ROOT_DIR}/
 │   ├── plex-config/
 │   ├── radarr-config/
 │   ├── sonarr-config/
+│   ├── bazarr-config/
 │   ├── prowlarr-config/
 │   ├── overseerr-config/
 │   ├── zilean-config/
@@ -202,7 +205,7 @@ ${ROOT_DIR}/
 The setup.sh script creates system users with dynamic UIDs/GIDs starting from 1000 and sets critical permissions (775/664, umask 002). All containers run with these user IDs for proper file access.
 
 **System users created:**
-- rclone, sonarr, radarr, recyclarr, prowlarr, overseerr, plex, decypharr, autoscan, pinchflat, zilean, zurg, tautulli, homarr, plextraktsync
+- rclone, sonarr, radarr, bazarr, recyclarr, prowlarr, overseerr, plex, decypharr, autoscan, pinchflat, zilean, zurg, tautulli, homarr, plextraktsync
 
 All users are added to the `mediacenter` group for shared access.
 
