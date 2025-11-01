@@ -18,7 +18,7 @@ include:
   - compose-services/plex.yml
   
   # Request Management
-  - compose-services/overseerr.yml
+  - compose-services/seerr.yml
   
   # Media Management
   - compose-services/radarr.yml
