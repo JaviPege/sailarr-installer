@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Sailarr Installer is an automated Docker-based media streaming stack that leverages Real-Debrid and the *Arr ecosystem to create an "infinite" media library. This is a microservices architecture project using Docker Compose to orchestrate multiple services including Plex, Overseerr, Radarr, Sonarr, Prowlarr, Zilean, Zurg, Decypharr, Recyclarr, Autoscan, Tautulli, Homarr, Pinchflat, PlexTraktSync, and Watchtower.
+Sailarr Installer is an automated Docker-based media streaming stack that leverages Real-Debrid and the *Arr ecosystem to create an "infinite" media library. This is a microservices architecture project using Docker Compose to orchestrate multiple services including Plex, Seerr, Radarr, Sonarr, Prowlarr, Zilean, Zurg, Decypharr, Recyclarr, Autoscan, Tautulli, Homarr, Pinchflat, PlexTraktSync, and Watchtower.
 
 ## Essential Commands
 
@@ -69,7 +69,7 @@ crontab -l | grep healthcheck
 
 ### Data Flow Pattern
 The system uses a **symlink-based architecture** optimized for hardlinking:
-1. **Request**: Overseerr → Radarr/Sonarr → Prowlarr → Zilean/Torrentio/Public Indexers
+1. **Request**: Seerr → Radarr/Sonarr → Prowlarr → Zilean/Torrentio/Public Indexers
 2. **Download**: Decypharr → Real-Debrid → Zurg → Rclone Mount
 3. **Media**: Symlinks → Media folders → Plex → Autoscan refresh → PlexTraktSync tracking
 
@@ -77,7 +77,7 @@ The system uses a **symlink-based architecture** optimized for hardlinking:
 
 **Core Media Stack:**
 - **Plex** - Media server (host network mode)
-- **Overseerr** - Request management interface (port 5055)
+- **Seerr** - Request management interface (port 5055)
 - **Radarr** - Movie management (port 7878)
 - **Sonarr** - TV show management (port 8989)
 - **Prowlarr** - Indexer manager (port 9696)
@@ -112,7 +112,7 @@ ${ROOT_DIR}/
 │   ├── radarr-config/
 │   ├── sonarr-config/
 │   ├── prowlarr-config/
-│   ├── overseerr-config/
+│   ├── seerr-config/
 │   ├── zilean-config/
 │   ├── zurg-config/
 │   ├── autoscan-config/
@@ -202,7 +202,7 @@ ${ROOT_DIR}/
 The setup.sh script creates system users with dynamic UIDs/GIDs starting from 1000 and sets critical permissions (775/664, umask 002). All containers run with these user IDs for proper file access.
 
 **System users created:**
-- rclone, sonarr, radarr, recyclarr, prowlarr, overseerr, plex, decypharr, autoscan, pinchflat, zilean, zurg, tautulli, homarr, plextraktsync
+- rclone, sonarr, radarr, recyclarr, prowlarr, seerr, plex, decypharr, autoscan, pinchflat, zilean, zurg, tautulli, homarr, plextraktsync
 
 All users are added to the `mediacenter` group for shared access.
 
