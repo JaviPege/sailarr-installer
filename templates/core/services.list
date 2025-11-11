@@ -1,0 +1,30 @@
+# Core Template - Service deployment order
+# Each line is a service name that maps to:
+#   - templates/services/{service}.json for configuration
+#   - docker/compose-services/{service}.yml for deployment
+
+# Infrastructure (no setup needed, just deploy)
+networks
+volumes
+
+# Real-Debrid Integration (no setup needed)
+zurg
+rclone
+
+# Media Management (*arr Stack)
+radarr
+sonarr
+prowlarr
+
+# Indexers
+zilean-postgres
+zilean
+
+# Download Client
+decypharr
+
+# Library Updates
+autoscan
+
+# Quality Profiles (runs after *arr services are configured)
+recyclarr

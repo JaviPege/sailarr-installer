@@ -1,0 +1,8 @@
+{
+  "service": "traefik-socket-proxy",
+  "description": "Traefik Socket Proxy - Secure Docker Socket Access",
+  "compose_file": "traefik-socket-proxy.yml",
+  "setup": {
+    "note": "This service provides secure access to Docker socket for Traefik - no configuration needed"
+  }
+}

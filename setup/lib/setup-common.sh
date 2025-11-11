@@ -12,7 +12,10 @@ export COLOR_CYAN='\033[0;36m'
 export COLOR_RESET='\033[0m'
 
 # Setup logging
-export SETUP_LOG_DIR="/tmp/sailarr-install-$(date +%Y%m%d-%H%M%S)"
+# Only initialize if not already set (allows sharing log dir across scripts)
+if [ -z "$SETUP_LOG_DIR" ]; then
+    export SETUP_LOG_DIR="/tmp/sailarr-install-$(date +%Y%m%d-%H%M%S)"
+fi
 export SETUP_LOG_FILE="${SETUP_LOG_DIR}/install.log"
 export SETUP_TRACE_FILE="${SETUP_LOG_DIR}/trace.log"
 
@@ -65,36 +68,36 @@ log_function_exit() {
 
 # Logging functions (console + file)
 log_info() {
-    echo -e "${COLOR_BLUE}[INFO]${COLOR_RESET} $1"
+    echo -e "${COLOR_BLUE}[INFO]${COLOR_RESET} $1" >&2
     log_to_file "INFO" "$1"
 }
 
 log_success() {
-    echo -e "${COLOR_GREEN}[✓]${COLOR_RESET} $1"
+    echo -e "${COLOR_GREEN}[✓]${COLOR_RESET} $1" >&2
     log_to_file "SUCCESS" "$1"
 }
 
 log_warning() {
-    echo -e "${COLOR_YELLOW}[WARNING]${COLOR_RESET} $1"
+    echo -e "${COLOR_YELLOW}[WARNING]${COLOR_RESET} $1" >&2
     log_to_file "WARNING" "$1"
 }
 
 log_error() {
-    echo -e "${COLOR_RED}[ERROR]${COLOR_RESET} $1"
+    echo -e "${COLOR_RED}[ERROR]${COLOR_RESET} $1" >&2
     log_to_file "ERROR" "$1"
 }
 
 log_debug() {
-    echo -e "${COLOR_CYAN}[DEBUG]${COLOR_RESET} $1"
+    echo -e "${COLOR_CYAN}[DEBUG]${COLOR_RESET} $1" >&2
     log_to_file "DEBUG" "$1"
 }
 
 log_section() {
-    echo ""
-    echo "========================================="
-    echo "$1"
-    echo "========================================="
-    echo ""
+    echo "" >&2
+    echo "=========================================" >&2
+    echo "$1" >&2
+    echo "=========================================" >&2
+    echo "" >&2
     log_to_file "SECTION" "$1"
 }
 
@@ -102,7 +105,7 @@ log_operation() {
     local operation=$1
     shift
     local details="$@"
-    echo -e "${COLOR_MAGENTA}[OP]${COLOR_RESET} ${operation}: ${details}"
+    echo -e "${COLOR_MAGENTA}[OP]${COLOR_RESET} ${operation}: ${details}" >&2
     log_to_file "OPERATION" "${operation}: ${details}"
 }
 
@@ -119,12 +122,13 @@ wait_for_service() {
     log_debug "Timeout: ${timeout}s, Port: ${port}, Endpoint: ${endpoint:-none}"
 
     local elapsed=0
-    local interval=5
+    local interval=2
 
     while [ $elapsed -lt $timeout ]; do
         log_trace "wait_for_service" "Checking health of $service_name (elapsed: ${elapsed}s)"
 
-        if docker ps --filter "name=$service_name" --filter "health=healthy" --format "{{.Names}}" | grep -q "$service_name"; then
+        # Check if container is healthy using docker inspect (same as original setup.sh)
+        if [ "$(docker inspect -f '{{.State.Health.Status}}' "$service_name" 2>/dev/null)" = "healthy" ]; then
             log_success "$service_name is healthy"
             log_function_exit "wait_for_service" 0 "healthy after ${elapsed}s"
             return 0

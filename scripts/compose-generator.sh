@@ -1,0 +1,275 @@
+#!/bin/bash
+# Compose Generator - Generates docker-compose.yml from templates
+# Usage: ./compose-generator.sh template1 template2 ...
+
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+TEMPLATES_DIR="${SCRIPT_DIR}/../templates"
+COMPOSE_SERVICES_DIR="${SCRIPT_DIR}/../docker/compose-services"
+OUTPUT_DIR="${SCRIPT_DIR}/../docker"
+OUTPUT_FILE="${OUTPUT_DIR}/docker-compose.yml"
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Logging functions
+log_info() {
+    echo -e "${BLUE}[INFO]${NC} $1"
+}
+
+log_success() {
+    echo -e "${GREEN}[✓]${NC} $1"
+}
+
+log_warning() {
+    echo -e "${YELLOW}[WARNING]${NC} $1"
+}
+
+log_error() {
+    echo -e "${RED}[ERROR]${NC} $1"
+}
+
+# Load template configuration
+load_template_config() {
+    local template_path=$1
+
+    if [ ! -f "${template_path}/template.conf" ]; then
+        log_error "Template configuration not found: ${template_path}/template.conf"
+        return 1
+    fi
+
+    source "${template_path}/template.conf"
+}
+
+# Global arrays for dependency resolution
+RESOLVED_TEMPLATES=()
+VISITING_TEMPLATES=()
+
+# Resolve template dependencies recursively
+resolve_dependencies() {
+    local template=$1
+
+    # Check for circular dependencies
+    for v in "${VISITING_TEMPLATES[@]}"; do
+        if [ "$v" = "$template" ]; then
+            log_error "Circular dependency detected: ${template}"
+            return 1
+        fi
+    done
+
+    # Already resolved
+    for r in "${RESOLVED_TEMPLATES[@]}"; do
+        if [ "$r" = "$template" ]; then
+            return 0
+        fi
+    done
+
+    # Mark as visiting
+    VISITING_TEMPLATES+=("${template}")
+
+    # Find template path
+    local template_path="${TEMPLATES_DIR}/${template}"
+    if [ ! -d "${template_path}" ]; then
+        log_error "Template not found: ${template}"
+        return 1
+    fi
+
+    # Load template config
+    load_template_config "${template_path}"
+
+    # Resolve dependencies first
+    if [ -n "$DEPENDS" ]; then
+        for dep in $DEPENDS; do
+            resolve_dependencies "$dep" || return 1
+        done
+    fi
+
+    # Add to resolved list
+    RESOLVED_TEMPLATES+=("${template}")
+
+    # Remove from visiting (remove last element)
+    unset 'VISITING_TEMPLATES[-1]'
+
+    return 0
+}
+
+# Collect services from template
+collect_services() {
+    local template=$1
+    local template_path="${TEMPLATES_DIR}/${template}"
+    local services_file="${template_path}/services.list"
+
+    if [ ! -f "${services_file}" ]; then
+        log_warning "No services.list found for template: ${template}" >&2
+        return 0
+    fi
+
+    log_info "Collecting services from: ${template}" >&2
+
+    # Read services.list (skip comments and empty lines)
+    while IFS= read -r service || [ -n "$service" ]; do
+        # Skip comments and empty lines
+        [[ "$service" =~ ^#.*$ ]] && continue
+        [[ -z "$service" ]] && continue
+
+        # Trim whitespace
+        service=$(echo "$service" | xargs)
+
+        # Map service name to compose file
+        # Try to load service JSON to get compose_file, otherwise use service.yml
+        local service_json="${TEMPLATES_DIR}/../templates/services/${service}.json"
+        if [ -f "$service_json" ]; then
+            local compose_file=$(jq -r '.compose_file // empty' "$service_json" 2>/dev/null)
+            # Skip if compose_file is explicitly null or "null" string
+            if [ "$compose_file" = "null" ] || [ -z "$compose_file" ]; then
+                # Service has no compose file (like recyclarr) - skip silently
+                continue
+            fi
+            echo "$compose_file"
+        else
+            echo "${service}.yml"
+        fi
+    done < "${services_file}"
+}
+
+# Generate docker-compose.yml
+generate_compose() {
+    local templates=("$@")
+    local all_services=()
+
+    # Reset global arrays
+    RESOLVED_TEMPLATES=()
+    VISITING_TEMPLATES=()
+
+    log_info "Resolving template dependencies..."
+
+    # Resolve dependencies for all requested templates
+    for template in "${templates[@]}"; do
+        resolve_dependencies "$template" || exit 1
+    done
+
+    log_success "Resolved templates: ${RESOLVED_TEMPLATES[*]}"
+    echo ""
+
+    # Collect all services from resolved templates
+    log_info "Collecting services from templates..."
+    for template in "${RESOLVED_TEMPLATES[@]}"; do
+        while IFS= read -r service; do
+            # Skip if already added
+            if [[ ! " ${all_services[@]} " =~ " ${service} " ]]; then
+                all_services+=("${service}")
+                log_info "  + ${service}"
+            fi
+        done < <(collect_services "$template")
+    done
+
+    echo ""
+    log_info "Generating docker-compose.yml..."
+
+    # Generate compose file
+    cat > "${OUTPUT_FILE}" << 'EOF'
+# MediaCenter Stack - Generated Compose File
+# Generated by: compose-generator.sh
+# DO NOT EDIT MANUALLY - This file is auto-generated
+
+name: mediacenter
+
+# Include service files
+include:
+EOF
+
+    # Add each service with proper indentation and comments
+    local prev_category=""
+    for service in "${all_services[@]}"; do
+        # Determine category from service name
+        local category=""
+        case "$service" in
+            networks.yml|volumes.yml)
+                category="Infrastructure"
+                ;;
+            zurg.yml|rclone.yml)
+                category="Real-Debrid Integration"
+                ;;
+            radarr.yml|sonarr.yml|prowlarr.yml)
+                category="Media Management"
+                ;;
+            zilean*.yml)
+                category="Indexers"
+                ;;
+            decypharr.yml|rdtclient.yml)
+                category="Download Clients"
+                ;;
+            plex.yml|jellyfin.yml|emby.yml)
+                category="Media Servers"
+                ;;
+            overseerr.yml|jellyseerr.yml)
+                category="Request Management"
+                ;;
+            autoscan.yml)
+                category="Library Management"
+                ;;
+            traefik*.yml)
+                category="Reverse Proxy"
+                ;;
+            tautulli.yml|homarr.yml|dashdot.yml|watchtower.yml|pinchflat.yml|plextraktsync.yml)
+                category="Optional Services"
+                ;;
+            *)
+                category="Services"
+                ;;
+        esac
+
+        # Add category comment if changed
+        if [ "$category" != "$prev_category" ]; then
+            echo "" >> "${OUTPUT_FILE}"
+            echo "  # ${category}" >> "${OUTPUT_FILE}"
+            prev_category="$category"
+        fi
+
+        # Add service include
+        echo "  - compose-services/${service}" >> "${OUTPUT_FILE}"
+    done
+
+    log_success "docker-compose.yml generated: ${OUTPUT_FILE}"
+    echo ""
+    log_info "Total services included: ${#all_services[@]}"
+    log_info "Templates used: ${#RESOLVED_TEMPLATES[@]}"
+}
+
+# Main execution
+main() {
+    if [ $# -eq 0 ]; then
+        log_error "No templates specified"
+        echo ""
+        echo "Usage: $0 <template1> [template2] ..."
+        echo ""
+        echo "Available templates:"
+        echo "  - core (required)"
+        echo "  - mediaplayers/plex"
+        echo "  - mediaplayers/jellyfin"
+        echo "  - extras/overseerr"
+        echo "  - extras/tautulli"
+        echo "  - extras/homarr"
+        echo "  - extras/traefik"
+        echo ""
+        echo "Example:"
+        echo "  $0 core mediaplayers/plex extras/overseerr"
+        exit 1
+    fi
+
+    log_info "MediaCenter Compose Generator"
+    echo "========================================"
+    echo ""
+
+    generate_compose "$@"
+
+    echo ""
+    log_success "Compose generation completed successfully!"
+}
+
+main "$@"

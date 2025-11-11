@@ -1,0 +1,25 @@
+{
+  "service": "decypharr",
+  "description": "Decypharr - Real-Debrid Download Client",
+  "compose_file": "decypharr.yml",
+  "setup": {
+    "steps": [
+      {
+        "action": "wait_for_service",
+        "description": "Waiting for Decypharr to be ready",
+        "params": {
+          "service": "decypharr",
+          "port": 8283,
+          "timeout": 120
+        }
+      },
+      {
+        "action": "log_info",
+        "description": "Display Decypharr setup information",
+        "params": {
+          "message": "Decypharr is ready and connected to Real-Debrid via Zurg"
+        }
+      }
+    ]
+  }
+}

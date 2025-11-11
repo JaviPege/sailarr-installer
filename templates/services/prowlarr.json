@@ -1,0 +1,58 @@
+{
+  "service": "prowlarr",
+  "description": "Prowlarr - Indexer Manager",
+  "compose_file": "prowlarr.yml",
+  "setup": {
+    "steps": [
+      {
+        "action": "wait_for_service",
+        "description": "Waiting for Prowlarr to be ready",
+        "params": {
+          "service": "prowlarr",
+          "port": 9696,
+          "timeout": 120
+        }
+      },
+      {
+        "action": "extract_api_key",
+        "description": "Extracting Prowlarr API key",
+        "params": {
+          "service": "prowlarr",
+          "output_var": "PROWLARR_API_KEY"
+        }
+      },
+      {
+        "action": "add_indexer_to_prowlarr",
+        "description": "Adding Zilean indexer",
+        "params": {
+          "prowlarr_port": 9696,
+          "prowlarr_api_key_var": "PROWLARR_API_KEY",
+          "indexer_name": "Zilean",
+          "indexer_url": "http://zilean:8181"
+        }
+      },
+      {
+        "action": "add_arr_to_prowlarr",
+        "description": "Connecting Radarr to Prowlarr",
+        "params": {
+          "service": "radarr",
+          "service_port": 7878,
+          "service_api_key_var": "RADARR_API_KEY",
+          "prowlarr_port": 9696,
+          "prowlarr_api_key_var": "PROWLARR_API_KEY"
+        }
+      },
+      {
+        "action": "add_arr_to_prowlarr",
+        "description": "Connecting Sonarr to Prowlarr",
+        "params": {
+          "service": "sonarr",
+          "service_port": 8989,
+          "service_api_key_var": "SONARR_API_KEY",
+          "prowlarr_port": 9696,
+          "prowlarr_api_key_var": "PROWLARR_API_KEY"
+        }
+      }
+    ]
+  }
+}

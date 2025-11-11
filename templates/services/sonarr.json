@@ -1,0 +1,75 @@
+{
+  "service": "sonarr",
+  "description": "Sonarr - TV Series Collection Manager",
+  "compose_file": "sonarr.yml",
+  "setup": {
+    "steps": [
+      {
+        "action": "wait_for_service",
+        "description": "Waiting for Sonarr to be ready",
+        "params": {
+          "service": "sonarr",
+          "port": 8989,
+          "timeout": 120
+        }
+      },
+      {
+        "action": "extract_api_key",
+        "description": "Extracting Sonarr API key",
+        "params": {
+          "service": "sonarr",
+          "output_var": "SONARR_API_KEY"
+        }
+      },
+      {
+        "action": "add_root_folder",
+        "description": "Adding TV Shows root folder",
+        "params": {
+          "service": "sonarr",
+          "port": 8989,
+          "api_key_var": "SONARR_API_KEY",
+          "path": "/data/media/tv",
+          "name": "TV Shows"
+        }
+      },
+      {
+        "action": "wait_for_service",
+        "description": "Waiting for Decypharr to be ready",
+        "params": {
+          "service": "decypharr",
+          "port": 8283,
+          "timeout": 120
+        }
+      },
+      {
+        "action": "sleep",
+        "description": "Waiting for Decypharr API to stabilize",
+        "params": {
+          "seconds": 10,
+          "reason": "Allowing Decypharr API to fully initialize"
+        }
+      },
+      {
+        "action": "add_download_client",
+        "description": "Connecting Decypharr download client",
+        "params": {
+          "service": "sonarr",
+          "port": 8989,
+          "api_key_var": "SONARR_API_KEY",
+          "client_name": "Decypharr",
+          "client_host": "decypharr",
+          "client_port": 8283
+        }
+      },
+      {
+        "action": "delete_default_quality_profiles",
+        "description": "Removing default quality profiles",
+        "params": {
+          "service": "sonarr",
+          "port": 8989,
+          "api_key_var": "SONARR_API_KEY"
+        }
+      }
+    ]
+  }
+}

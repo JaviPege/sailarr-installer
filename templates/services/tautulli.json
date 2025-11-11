@@ -1,0 +1,25 @@
+{
+  "service": "tautulli",
+  "description": "Tautulli - Plex Analytics and Monitoring",
+  "compose_file": "tautulli.yml",
+  "setup": {
+    "steps": [
+      {
+        "action": "wait_for_service",
+        "description": "Waiting for Tautulli to be ready",
+        "params": {
+          "service": "tautulli",
+          "port": 8181,
+          "timeout": 90
+        }
+      },
+      {
+        "action": "log_info",
+        "description": "Display Tautulli setup instructions",
+        "params": {
+          "message": "Tautulli is ready at http://localhost:8181\nConnect it to your Plex server in the setup wizard"
+        }
+      }
+    ]
+  }
+}

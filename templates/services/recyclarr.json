@@ -1,0 +1,25 @@
+{
+  "service": "recyclarr",
+  "description": "Recyclarr - TRaSH Guide Quality Profiles",
+  "compose_file": null,
+  "note": "Recyclarr is not a persistent service - it runs once to sync quality profiles",
+  "setup": {
+    "steps": [
+      {
+        "action": "run_recyclarr",
+        "description": "Creating TRaSH Guide quality profiles for Radarr and Sonarr",
+        "params": {
+          "radarr_api_key_var": "RADARR_API_KEY",
+          "sonarr_api_key_var": "SONARR_API_KEY"
+        }
+      },
+      {
+        "action": "log_success",
+        "description": "Display completion message",
+        "params": {
+          "message": "TRaSH Guide quality profiles have been created successfully"
+        }
+      }
+    ]
+  }
+}

@@ -39,3 +39,6 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Claude Code development notes
+claude.md

@@ -1,0 +1,25 @@
+{
+  "service": "zilean",
+  "description": "Zilean - DMM Indexer",
+  "compose_file": "zilean.yml",
+  "setup": {
+    "steps": [
+      {
+        "action": "wait_for_service",
+        "description": "Waiting for Zilean to be ready",
+        "params": {
+          "service": "zilean",
+          "port": 8181,
+          "timeout": 180
+        }
+      },
+      {
+        "action": "log_info",
+        "description": "Zilean info",
+        "params": {
+          "message": "Zilean will take 1-2 hours to populate its database initially"
+        }
+      }
+    ]
+  }
+}
