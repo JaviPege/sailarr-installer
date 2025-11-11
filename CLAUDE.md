@@ -4,7 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Sailarr Installer is an automated Docker-based media streaming stack that leverages Real-Debrid and the *Arr ecosystem to create an "infinite" media library. This is a microservices architecture project using Docker Compose to orchestrate multiple services including Plex, Seerr, Radarr, Sonarr, Prowlarr, Zilean, Zurg, Decypharr, Recyclarr, Autoscan, Tautulli, Homarr, Pinchflat, PlexTraktSync, and Watchtower.
+Sailarr Installer is an automated Docker-based media streaming stack that leverages Real-Debrid and the *Arr ecosystem to create an "infinite" media library. This is a fully automated installer with a modular template system that deploys a microservices architecture using Docker Compose to orchestrate services including Plex, Overseerr, Radarr, Sonarr, Prowlarr, Zilean, Zurg, Decypharr, Recyclarr, Autoscan, Tautulli, Homarr, Pinchflat, PlexTraktSync, and Watchtower.
+
+The installer is designed to be run once (`./setup.sh`) and handles everything from user input collection to full stack deployment and service configuration with zero manual steps required.
 
 ## Essential Commands
 
@@ -69,7 +71,7 @@ crontab -l | grep healthcheck
 
 ### Data Flow Pattern
 The system uses a **symlink-based architecture** optimized for hardlinking:
-1. **Request**: Seerr → Radarr/Sonarr → Prowlarr → Zilean/Torrentio/Public Indexers
+1. **Request**: Overseerr → Radarr/Sonarr → Prowlarr → Zilean/Torrentio/Public Indexers
 2. **Download**: Decypharr → Real-Debrid → Zurg → Rclone Mount
 3. **Media**: Symlinks → Media folders → Plex → Autoscan refresh → PlexTraktSync tracking
 
@@ -77,7 +79,7 @@ The system uses a **symlink-based architecture** optimized for hardlinking:
 
 **Core Media Stack:**
 - **Plex** - Media server (host network mode)
-- **Seerr** - Request management interface (port 5055)
+- **Overseerr** - Request management interface (port 5055)
 - **Radarr** - Movie management (port 7878)
 - **Sonarr** - TV show management (port 8989)
 - **Prowlarr** - Indexer manager (port 9696)
@@ -112,7 +114,7 @@ ${ROOT_DIR}/
 │   ├── radarr-config/
 │   ├── sonarr-config/
 │   ├── prowlarr-config/
-│   ├── seerr-config/
+│   ├── overseerr-config/
 │   ├── zilean-config/
 │   ├── zurg-config/
 │   ├── autoscan-config/
@@ -135,14 +137,15 @@ ${ROOT_DIR}/
 ### Repository Structure
 ```
 /repository-root/
-├── setup.sh             # Main installation script
+├── setup.sh             # Main installation script - entry point
+├── .env.install         # User configuration (created by setup.sh)
 ├── README.md            # User documentation
 ├── INSTALLATION.md      # Detailed installation guide
 ├── LICENSE              # MIT License
 ├── CLAUDE.md            # This file - Claude Code guidance
 │
 ├── setup/               # Setup scripts and libraries
-│   ├── lib/            # Modular function libraries
+│   ├── lib/            # Modular function libraries (sourced by setup.sh)
 │   │   ├── setup-common.sh    # Logging, validation, wait functions
 │   │   ├── setup-users.sh     # User/group management
 │   │   ├── setup-api.sh       # Generic API functions
@@ -150,7 +153,12 @@ ${ROOT_DIR}/
 │   └── utils/          # Setup utilities
 │       └── split-compose.py   # Compose file splitter
 │
-├── scripts/            # Maintenance scripts
+├── scripts/            # Maintenance and automation scripts
+│   ├── compose-generator.sh   # Generates docker-compose.yml from templates
+│   ├── setup-executor.sh      # Executes setup.json configurations
+│   ├── template-selector.sh   # Interactive template selection
+│   ├── get-services-list.sh   # Lists services from templates
+│   ├── get-config-dirs.sh     # Lists config directories
 │   ├── health/        # Health check scripts
 │   │   ├── arrs-mount-healthcheck.sh
 │   │   └── plex-mount-healthcheck.sh
@@ -158,6 +166,17 @@ ${ROOT_DIR}/
 │   │   ├── backup-mediacenter.sh
 │   │   └── backup-mediacenter-optimized.sh
 │   └── recyclarr-sync.sh  # Manual profile update
+│
+├── templates/         # Modular service templates (NEW)
+│   ├── README.md      # Template system documentation
+│   ├── core/          # Required base stack
+│   ├── mediaplayers/  # Media server options (plex)
+│   ├── services/      # JSON configuration for setup-executor
+│   │   ├── plex.json
+│   │   ├── radarr.json
+│   │   ├── sonarr.json
+│   │   └── ... (per-service setup actions)
+│   └── extras/        # Optional services
 │
 ├── config/            # Configuration templates
 │   ├── recyclarr.yml  # TRaSH Guide quality profiles
@@ -169,13 +188,19 @@ ${ROOT_DIR}/
 │       └── zurg.yml   # Zurg indexer definition
 │
 └── docker/            # Docker Compose configuration
-    ├── .env.defaults  # Default environment variables
-    ├── .env.local     # User-specific variables (created by setup.sh)
+    ├── .env.defaults  # Default environment variables (version controlled)
+    ├── .env.local     # User-specific variables (created by setup.sh, not in git)
+    ├── docker-compose.yml  # Master compose (generated by compose-generator.sh)
+    ├── POST-INSTALL.md     # Manual post-install steps (Overseerr, Tautulli)
     ├── up.sh          # Helper script to start stack
     ├── down.sh        # Helper script to stop stack
     ├── restart.sh     # Helper script to restart stack
-    └── compose-services/  # Split compose files
-        ├── core.yml
+    ├── pull.sh        # Helper script to pull updates
+    ├── compose.sh     # Helper script for compose commands
+    ├── fix-permissions.sh  # Fix ownership issues
+    └── compose-services/   # Split compose files (one per service)
+        ├── networks.yml
+        ├── volumes.yml
         ├── plex.yml
         ├── radarr.yml
         └── ... (one file per service)
@@ -202,7 +227,7 @@ ${ROOT_DIR}/
 The setup.sh script creates system users with dynamic UIDs/GIDs starting from 1000 and sets critical permissions (775/664, umask 002). All containers run with these user IDs for proper file access.
 
 **System users created:**
-- rclone, sonarr, radarr, recyclarr, prowlarr, seerr, plex, decypharr, autoscan, pinchflat, zilean, zurg, tautulli, homarr, plextraktsync
+- rclone, sonarr, radarr, recyclarr, prowlarr, overseerr, plex, decypharr, autoscan, pinchflat, zilean, zurg, tautulli, homarr, plextraktsync
 
 All users are added to the `mediacenter` group for shared access.
 
@@ -221,10 +246,35 @@ All users are added to the `mediacenter` group for shared access.
 - **Health check logs**: Located in `/YOUR_INSTALL_DIR/logs/`
 
 ### Modular Architecture
-The project uses a modular approach:
-- **Setup libraries**: Reusable bash functions in `setup/lib/`
-- **Split compose files**: One file per service in `docker/compose-services/`
-- **Organized configs**: Templates in `config/`, runtime configs in `${ROOT_DIR}/config/`
+The project uses a highly modular approach with three key systems:
+
+1. **Setup Library System** (`setup/lib/`)
+   - Reusable bash functions sourced by setup.sh
+   - `setup-common.sh`: Logging (log_info, log_success, log_error), validation, wait functions
+   - `setup-users.sh`: User/group creation and management
+   - `setup-api.sh`: Generic API key retrieval and service configuration
+   - `setup-services.sh`: High-level service configuration orchestration
+   - All functions use `set -e` for error handling and color-coded output
+
+2. **Template System** (`templates/`)
+   - **Purpose**: Modular service deployment with dependency management
+   - **Structure**: `core/` (required), `mediaplayers/` (plex/jellyfin), `extras/` (optional services)
+   - **Template files**:
+     - `template.conf`: Metadata (NAME, DESCRIPTION, DEPENDS, REQUIRED)
+     - `services.list`: List of compose files to include
+     - `setup.sh`: Optional post-deployment configuration
+   - **Service JSON** (`templates/services/*.json`): Declarative setup actions executed by setup-executor.sh
+   - **Workflow**: User selects templates → compose-generator.sh merges services.list → generates docker-compose.yml → setup-executor.sh runs post-deployment configs
+
+3. **Split Compose System** (`docker/compose-services/`)
+   - One YAML file per service for modularity
+   - Master `docker-compose.yml` includes all services
+   - Allows selective deployment and independent management
+   - Uses `mediacenter` bridge network for all services except Plex (host mode)
+
+4. **Configuration Templates** (`config/`)
+   - Source templates for runtime configs deployed to `${ROOT_DIR}/config/`
+   - Includes indexer definitions, quality profiles, and service configs
 
 ### Filesystem Design
 The project uses symlinks to maintain hardlink compatibility between download clients and media servers. The path structure is:
@@ -240,25 +290,82 @@ This is a configuration-heavy deployment project without formal tests. Validatio
 - Integration testing via full stack deployment
 - Bash script syntax validation (`bash -n`)
 
+## Setup.sh Architecture
+
+The main installation script follows a structured flow:
+
+1. **Phase 1: Input Collection**
+   - Interactive prompts using `ask_user_input()` and `ask_password()` functions
+   - Validates input and checks for conflicts (UID availability)
+   - Creates `.env.install` with all configuration
+   - Shows summary and asks for confirmation
+
+2. **Phase 2: System Preparation**
+   - Creates installation directory structure
+   - Sources libraries from `setup/lib/`
+   - Creates system users with dynamic UIDs starting from 1000
+   - Creates `mediacenter` group for shared access
+   - Sets permissions (775/664, umask 002)
+
+3. **Phase 3: Template Processing**
+   - Runs `scripts/compose-generator.sh` to merge template service lists
+   - Generates `docker/docker-compose.yml` from selected templates
+   - Copies configuration templates to runtime directories
+
+4. **Phase 4: Service Deployment**
+   - Pulls Docker images via helper scripts
+   - Starts containers in dependency order
+   - Waits for services to become healthy
+
+5. **Phase 5: Automated Configuration**
+   - Executes `scripts/setup-executor.sh` with service JSON files
+   - Retrieves API keys from service config files
+   - Configures inter-service connections (Prowlarr ↔ *Arrs)
+   - Sets up download clients, root folders, indexers
+   - Runs Recyclarr to create TRaSH Guide quality profiles
+
+6. **Phase 6: Health Monitoring**
+   - Installs health check scripts to `${ROOT_DIR}/scripts/health/`
+   - Creates cron jobs for automatic mount verification
+   - Sets up logging infrastructure
+
+**Key Design Principles:**
+- Atomic functions for reusability
+- Extensive logging to `/tmp/sailarr-install-*/`
+- Idempotent operations (can re-run safely)
+- Defensive programming with validation at every step
+
 ## Code Style & Conventions
 
 ### Bash Scripts
-- Use `set -e` for error handling
+- Use `set -e` for error handling (fail fast on errors)
 - Modular functions in `setup/lib/` with clear exports
 - Color-coded logging: blue (info), green (success), yellow (warning), red (error)
 - Comprehensive error messages with actionable guidance
+- Function documentation with usage examples in comments
+- All user-facing paths use `${ROOT_DIR}` variable (default: `/mediacenter`)
+- Temporary files go to `/tmp/sailarr-install-TIMESTAMP/`
 
 ### Docker Compose
 - Split services into individual files in `compose-services/`
-- Use `network_mode: host` only for Plex
+- Each file starts with `name: mediacenter` to ensure consistent project name
+- Use `network_mode: host` only for Plex (required for DLNA and local network discovery)
 - All other services use `mediacenter` bridge network
 - Health checks defined for all critical services
-- Environment variables from `.env.defaults` and `.env.local`
+- Environment variables from `.env.defaults` (defaults) and `.env.local` (user-specific)
+- Use `${VARIABLE:-default}` syntax for environment variables with fallbacks
+
+### Template System
+- Each template must have `template.conf` with NAME, DESCRIPTION, DEPENDS
+- `services.list` contains one compose file per line (comments supported with #)
+- Service JSON files use declarative actions: `wait_for_service`, `get_api_key`, `configure_*`
+- All templates should handle missing dependencies gracefully
 
 ### Documentation
 - Keep README.md user-focused with quick start guide
 - INSTALLATION.md contains detailed step-by-step instructions
 - CLAUDE.md (this file) for technical/architectural details
+- docker/POST-INSTALL.md for manual post-install steps
 - Inline comments in complex bash functions
 
 ## Common Issues & Solutions

@@ -13,7 +13,7 @@ Each service is defined in its own YAML file for better organization and mainten
 │   ├── volumes.yml             # Volume definitions
 │   ├── traefik.yml             # Reverse proxy
 │   ├── plex.yml                # Media server
-│   ├── seerr.yml           # Request management
+│   ├── overseerr.yml           # Request management
 │   ├── radarr.yml              # Movie management
 │   ├── sonarr.yml              # TV show management
 │   └── ...                     # Other services
@@ -28,8 +28,8 @@ docker compose up -d
 
 ### Start specific services:
 ```bash
-# Start only Plex and Seerr
-docker compose up -d plex seerr
+# Start only Plex and Overseerr
+docker compose up -d plex overseerr
 
 # Start media management stack
 docker compose up -d radarr sonarr prowlarr
@@ -69,7 +69,7 @@ docker compose up -d radarr
 - `plex.yml` - Plex Media Server
 
 ### Request Management
-- `seerr.yml` - Media requests
+- `overseerr.yml` - Media requests
 
 ### Media Management (*arr stack)
 - `radarr.yml` - Movies

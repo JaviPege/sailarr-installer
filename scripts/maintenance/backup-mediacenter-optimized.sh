@@ -110,11 +110,11 @@ touch "${BACKUP_DIR}/data/realdebrid-zurg/.gitkeep"
 # 5. Backup system user configuration info
 echo "   → System users information"
 getent group mediacenter > "${BACKUP_DIR}/mediacenter-group.txt" 2>/dev/null || echo "Group mediacenter not found" > "${BACKUP_DIR}/mediacenter-group.txt"
-getent passwd | grep -E '^(rclone|sonarr|radarr|prowlarr|seerr|plex|recyclarr|rdtclient|autoscan|traefik|pinchflat|plextraktsync|homarr|dashdot):' > "${BACKUP_DIR}/mediacenter-users.txt" 2>/dev/null || echo "No mediacenter users found" > "${BACKUP_DIR}/mediacenter-users.txt"
+getent passwd | grep -E '^(rclone|sonarr|radarr|prowlarr|overseerr|plex|recyclarr|rdtclient|autoscan|traefik|pinchflat|plextraktsync|homarr|dashdot):' > "${BACKUP_DIR}/mediacenter-users.txt" 2>/dev/null || echo "No mediacenter users found" > "${BACKUP_DIR}/mediacenter-users.txt"
 
 # 6. Docker images list
 echo "   → Docker images list"
-docker images --format "table {{.Repository}}:{{.Tag}}\t{{.ID}}\t{{.Size}}" | grep -E "(mediacenter|traefik|plex|seerr|prowlarr|sonarr|radarr|zurg|zilean|rclone|autoscan|homarr|dashdot|recyclarr|rdtclient|pinchflat|plextraktsync|watchtower|postgres)" > "${BACKUP_DIR}/docker-images.txt" 2>/dev/null || echo "No mediacenter images found" > "${BACKUP_DIR}/docker-images.txt"
+docker images --format "table {{.Repository}}:{{.Tag}}\t{{.ID}}\t{{.Size}}" | grep -E "(mediacenter|traefik|plex|overseerr|prowlarr|sonarr|radarr|zurg|zilean|rclone|autoscan|homarr|dashdot|recyclarr|rdtclient|pinchflat|plextraktsync|watchtower|postgres)" > "${BACKUP_DIR}/docker-images.txt" 2>/dev/null || echo "No mediacenter images found" > "${BACKUP_DIR}/docker-images.txt"
 
 # 7. Create restore instructions
 cat > "${BACKUP_DIR}/RESTORE-INSTRUCTIONS.md" << 'EOF'

@@ -265,7 +265,7 @@ After answering all questions, the installer will:
 - Zilean (DMM Indexer)
 - PostgreSQL (Zilean database)
 - Decypharr (Download client)
-- Seerr (Request management)
+- Overseerr (Request management)
 - Autoscan (Library updates)
 - Traefik (if enabled)
 - Optional services (if selected)
@@ -274,7 +274,7 @@ After answering all questions, the installer will:
 - Waits for services to generate API keys
 - Automatically extracts keys from configuration files
 - Stores them for automatic configuration
-- **Displays API keys at the end of installation** for Seerr setup
+- **Displays API keys at the end of installation** for Overseerr setup
 
 ### 5. Configure Services (1-2 minutes)
 
@@ -336,7 +336,7 @@ Access URLs depend on whether you enabled Traefik or not.
 - **Radarr:** `http://YOUR_SERVER_IP:7878`
 - **Sonarr:** `http://YOUR_SERVER_IP:8989`
 - **Prowlarr:** `http://YOUR_SERVER_IP:9696`
-- **Seerr:** `http://YOUR_SERVER_IP:5055`
+- **Overseerr:** `http://YOUR_SERVER_IP:5055`
 - **Zilean:** `http://YOUR_SERVER_IP:8181`
 - **Decypharr:** `http://YOUR_SERVER_IP:8283`
 - **Tautulli:** `http://YOUR_SERVER_IP:8282`
@@ -355,7 +355,7 @@ All services are accessible via subdomains:
 - **Radarr:** `https://radarr.YOUR_DOMAIN`
 - **Sonarr:** `https://sonarr.YOUR_DOMAIN`
 - **Prowlarr:** `https://prowlarr.YOUR_DOMAIN`
-- **Seerr:** `https://seerr.YOUR_DOMAIN`
+- **Overseerr:** `https://overseerr.YOUR_DOMAIN`
 - **Zilean:** `https://zilean.YOUR_DOMAIN`
 - **Decypharr:** `https://decypharr.YOUR_DOMAIN`
 - **Tautulli:** `https://tautulli.YOUR_DOMAIN`
@@ -377,8 +377,8 @@ Replace `YOUR_DOMAIN` with the domain you configured during installation.
    - Configure metadata preferences
    - Set library scanner to run automatically
 
-2. **Seerr Setup:**
-   - Open Seerr at your configured URL
+2. **Overseerr Setup:**
+   - Open Overseerr at your configured URL
    - **📖 Follow the detailed guide:** [docker/POST-INSTALL.md](docker/POST-INSTALL.md)
    - The guide includes step-by-step instructions with exact values for:
      - Connecting to Plex
@@ -394,9 +394,9 @@ Replace `YOUR_DOMAIN` with the domain you configured during installation.
 
 ### First Request
 
-Once Seerr is configured (see [docker/POST-INSTALL.md](docker/POST-INSTALL.md)):
+Once Overseerr is configured (see [docker/POST-INSTALL.md](docker/POST-INSTALL.md)):
 
-1. Open Seerr at your configured URL
+1. Open Overseerr at your configured URL
 2. Search for a movie or TV show
 3. Click "Request" and confirm
 4. Monitor progress:
@@ -574,7 +574,7 @@ If you encounter issues:
 
 Once installation is complete:
 
-1. Configure Seerr for content requests
+1. Configure Overseerr for content requests
 2. Set up Plex libraries and metadata
 3. Customize quality profiles in Recyclarr
 4. Add additional indexers in Prowlarr
