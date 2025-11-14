@@ -37,8 +37,8 @@ include:
   
   # Utilities
   # - compose-services/recyclarr.yml  # Run manually when needed
-  - compose-services/autoscan.yml
-  - compose-services/watchtower.yml
+  #- compose-services/autoscan.yml
+  #- compose-services/watchtower.yml
   
   # Additional Services
   - compose-services/pinchflat.yml
