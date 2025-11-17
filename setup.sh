@@ -642,6 +642,7 @@ show_installation_summary() {
     echo "  - decypharr (UID: ${DECYPHARR_UID})"
     echo "  - autoscan (UID: ${AUTOSCAN_UID})"
     echo "  - pinchflat (UID: ${PINCHFLAT_UID})"
+    echo "  - homarr (UID: ${HOMARR_UID})"
     echo ""
     echo "GROUP TO BE CREATED"
     echo "-------------------"
@@ -649,7 +650,7 @@ show_installation_summary() {
     echo ""
     echo "DIRECTORIES TO BE CREATED"
     echo "-------------------------"
-    echo "  - ${ROOT_DIR}/config/{sonarr,radarr,recyclarr,prowlarr,overseerr,plex,autoscan,zilean,decypharr}-config"
+    echo "  - ${ROOT_DIR}/config/{sonarr,radarr,recyclarr,prowlarr,overseerr,plex,autoscan,zilean,decypharr,homarr}-config"
     echo "  - ${ROOT_DIR}/data/symlinks/{radarr,sonarr}"
     echo "  - ${ROOT_DIR}/data/realdebrid-zurg"
     echo "  - ${ROOT_DIR}/data/media/{movies,tv}"
@@ -708,6 +709,7 @@ setup_core_users() {
     create_system_user "decypharr" "$DECYPHARR_UID" "$MEDIACENTER_GID" "Decypharr"
     create_system_user "zilean" "$ZILEAN_UID" "$MEDIACENTER_GID" "Zilean"
     create_system_user "zurg" "$ZURG_UID" "$MEDIACENTER_GID" "Zurg"
+    create_system_user "homarr" "$HOMARR_UID" "$MEDIACENTER_GID" "Homarr"
 
     log_success "Core users created successfully"
 }
@@ -723,6 +725,7 @@ setup_core_directories() {
     create_folder "${ROOT_DIR}/config/prowlarr-config" "$INSTALL_UID:mediacenter" "775"
     create_folder "${ROOT_DIR}/config/decypharr-config" "$INSTALL_UID:mediacenter" "775"
     create_folder "${ROOT_DIR}/config/zilean-config" "$INSTALL_UID:mediacenter" "775"
+    create_folder "${ROOT_DIR}/config/homarr-config" "$INSTALL_UID:mediacenter" "775"
 
     # Data directories for CORE services
     create_folder "${ROOT_DIR}/data/symlinks/radarr" "$INSTALL_UID:mediacenter" "775"
@@ -748,6 +751,7 @@ setup_core_permissions() {
     set_permissions "${ROOT_DIR}/config/sonarr-config" "" "sonarr:mediacenter"
     set_permissions "${ROOT_DIR}/config/prowlarr-config" "" "prowlarr:mediacenter"
     set_permissions "${ROOT_DIR}/config/decypharr-config" "" "decypharr:mediacenter"
+    set_permissions "${ROOT_DIR}/config/homarr-config" "" "homarr:mediacenter"
 
     log_success "Core permissions set successfully"
 }
@@ -1240,6 +1244,7 @@ create_folder "${ROOT_DIR}/config/autoscan-config" "$INSTALL_UID:mediacenter" "7
 create_folder "${ROOT_DIR}/config/zilean-config" "$INSTALL_UID:mediacenter" "775"
 create_folder "${ROOT_DIR}/config/decypharr-config" "$INSTALL_UID:mediacenter" "775"
 create_folder "${ROOT_DIR}/config/pinchflat-config" "$INSTALL_UID:mediacenter" "775"
+create_folder "${ROOT_DIR}/config/homarr-config" "$INSTALL_UID:mediacenter" "775"
 
 # Data directories
 create_folder "${ROOT_DIR}/data/symlinks/radarr" "$INSTALL_UID:mediacenter" "775"
