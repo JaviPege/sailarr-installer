@@ -585,7 +585,7 @@ show_installation_summary() {
     echo ""
     echo "DIRECTORIES TO BE CREATED"
     echo "-------------------------"
-    echo "  - ${ROOT_DIR}/config/{sonarr,bazarr,radarr,recyclarr,prowlarr,overseerr,plex,autoscan,zilean,decypharr}-config"
+    echo "  - ${ROOT_DIR}/config/{sonarr,bazarr,radarr,recyclarr,prowlarr,overseerr,plex,autoscan,zilean,decypharr,homarr}-config"
     echo "  - ${ROOT_DIR}/data/symlinks/{radarr,sonarr}"
     echo "  - ${ROOT_DIR}/data/realdebrid-zurg"
     echo "  - ${ROOT_DIR}/data/media/{movies,tv}"
@@ -1044,6 +1044,7 @@ create_folder "${ROOT_DIR}/config/autoscan-config" "$INSTALL_UID:mediacenter" "7
 create_folder "${ROOT_DIR}/config/zilean-config" "$INSTALL_UID:mediacenter" "775"
 create_folder "${ROOT_DIR}/config/decypharr-config" "$INSTALL_UID:mediacenter" "775"
 create_folder "${ROOT_DIR}/config/pinchflat-config" "$INSTALL_UID:mediacenter" "775"
+create_folder "${ROOT_DIR}/config/homarr-config" "$INSTALL_UID:mediacenter" "775"
 
 # Data directories
 create_folder "${ROOT_DIR}/data/symlinks/radarr" "$INSTALL_UID:mediacenter" "775"
@@ -1060,16 +1061,6 @@ echo "Setting permissions..."
 
 set_permissions "${ROOT_DIR}/data/" "a=,a+rX,u+w,g+w" "$INSTALL_UID:mediacenter"
 set_permissions "${ROOT_DIR}/config/" "a=,a+rX,u+w,g+w" "$INSTALL_UID:mediacenter"
-set_permissions "${ROOT_DIR}/config/sonarr-config" "" "sonarr:mediacenter"
-set_permissions "${ROOT_DIR}/config/bazarr-config" "" "bazarr:mediacenter"
-set_permissions "${ROOT_DIR}/config/radarr-config" "" "radarr:mediacenter"
-set_permissions "${ROOT_DIR}/config/recyclarr-config" "" "recyclarr:mediacenter"
-set_permissions "${ROOT_DIR}/config/prowlarr-config" "" "prowlarr:mediacenter"
-set_permissions "${ROOT_DIR}/config/overseerr-config" "" "overseerr:mediacenter"
-set_permissions "${ROOT_DIR}/config/plex-config" "" "plex:mediacenter"
-set_permissions "${ROOT_DIR}/config/decypharr-config" "" "decypharr:mediacenter"
-set_permissions "${ROOT_DIR}/config/autoscan-config" "" "autoscan:mediacenter"
-set_permissions "${ROOT_DIR}/config/pinchflat-config" "" "pinchflat:mediacenter"
 
 echo "✓ Permissions set"
 
@@ -1104,7 +1095,7 @@ if [ -d "${ROOT_DIR}/rclone.conf" ]; then
     rm -rf "${ROOT_DIR}/rclone.conf"
 fi
 
-copy_file "$SCRIPT_DIR/config/rclone.conf" "${ROOT_DIR}/rclone.conf" "rclone:mediacenter"
+copy_file "$SCRIPT_DIR/config/rclone.conf" "${ROOT_DIR}/rclone.conf" "$INSTALL_UID:mediacenter"
 
 # Verify it was copied as a file
 if [ ! -f "${ROOT_DIR}/rclone.conf" ]; then
@@ -1118,7 +1109,7 @@ log_success "rclone.conf copied successfully to ${ROOT_DIR}/"
 if [ -f "$SCRIPT_DIR/config/autoscan/config.yml" ]; then
     echo ""
     log_operation "COPY" "autoscan config to ${ROOT_DIR}/config/autoscan-config/"
-    copy_file "$SCRIPT_DIR/config/autoscan/config.yml" "${ROOT_DIR}/config/autoscan-config/config.yml" "autoscan:mediacenter" "644"
+    copy_file "$SCRIPT_DIR/config/autoscan/config.yml" "${ROOT_DIR}/config/autoscan-config/config.yml" "$INSTALL_UID:mediacenter" "644"
     echo "✓ Autoscan configuration copied"
 fi
 
@@ -1126,21 +1117,21 @@ fi
 echo ""
 echo "Downloading custom indexer definitions..."
 log_operation "MKDIR" "${ROOT_DIR}/config/prowlarr-config/Definitions/Custom"
-create_folder "${ROOT_DIR}/config/prowlarr-config/Definitions/Custom" "prowlarr:mediacenter" "755"
+create_folder "${ROOT_DIR}/config/prowlarr-config/Definitions/Custom" "$INSTALL_UID:mediacenter" "755"
 
 # Download Torrentio from official repository
 log_operation "DOWNLOAD" "Torrentio indexer definition from GitHub"
 download_file \
     "https://github.com/dreulavelle/Prowlarr-Indexers/raw/main/Custom/torrentio.yml" \
     "${ROOT_DIR}/config/prowlarr-config/Definitions/Custom/torrentio.yml" \
-    "prowlarr:mediacenter"
+    "$INSTALL_UID:mediacenter"
 echo "  ✓ Torrentio indexer definition downloaded"
 
 # Download Zilean from official repository
 download_file \
     "https://github.com/dreulavelle/Prowlarr-Indexers/raw/main/Custom/zilean.yml" \
     "${ROOT_DIR}/config/prowlarr-config/Definitions/Custom/zilean.yml" \
-    "prowlarr:mediacenter"
+    "$INSTALL_UID:mediacenter"
 echo "  ✓ Zilean indexer definition downloaded"
 
 echo "✓ Custom indexer definitions configured"
@@ -1148,7 +1139,7 @@ echo "✓ Custom indexer definitions configured"
 # Configure Zurg with Real-Debrid token
 echo ""
 echo "Configuring Zurg with Real-Debrid token..."
-create_folder "${ROOT_DIR}/config/zurg-config" "rclone:mediacenter" "755"
+create_folder "${ROOT_DIR}/config/zurg-config" "$INSTALL_UID:mediacenter" "755"
 
 ZURG_CONFIG="# Zurg configuration version
 zurg: v1
@@ -1185,15 +1176,15 @@ directories:
     filters:
       - regex: /.*/"
 
-create_file_from_content "${ROOT_DIR}/config/zurg-config/config.yml" "$ZURG_CONFIG" "rclone:mediacenter"
+create_file_from_content "${ROOT_DIR}/config/zurg-config/config.yml" "$ZURG_CONFIG" "$INSTALL_UID:mediacenter"
 echo "✓ Zurg configured with Real-Debrid token"
 
 # Configure Decypharr with Real-Debrid token
 echo ""
 echo "Configuring Decypharr with Real-Debrid token..."
-create_folder "${ROOT_DIR}/config/decypharr-config/cache" "decypharr:mediacenter" "755"
-create_folder "${ROOT_DIR}/config/decypharr-config/logs" "decypharr:mediacenter" "755"
-create_folder "${ROOT_DIR}/config/decypharr-config/rclone" "decypharr:mediacenter" "755"
+create_folder "${ROOT_DIR}/config/decypharr-config/cache" "$INSTALL_UID:mediacenter" "755"
+create_folder "${ROOT_DIR}/config/decypharr-config/logs" "$INSTALL_UID:mediacenter" "755"
+create_folder "${ROOT_DIR}/config/decypharr-config/rclone" "$INSTALL_UID:mediacenter" "755"
 
 # Create initial config.json
 DECYPHARR_CONFIG='{
@@ -1257,11 +1248,11 @@ DECYPHARR_CONFIG='{
   "use_auth": false
 }'
 
-create_file_from_content "${ROOT_DIR}/config/decypharr-config/config.json" "$DECYPHARR_CONFIG" "decypharr:mediacenter"
+create_file_from_content "${ROOT_DIR}/config/decypharr-config/config.json" "$DECYPHARR_CONFIG" "$INSTALL_UID:mediacenter"
 
 # Create empty auth.json and torrents.json
-create_file_from_content "${ROOT_DIR}/config/decypharr-config/auth.json" "{}" "decypharr:mediacenter"
-create_file_from_content "${ROOT_DIR}/config/decypharr-config/torrents.json" "{}" "decypharr:mediacenter"
+create_file_from_content "${ROOT_DIR}/config/decypharr-config/auth.json" "{}" "$INSTALL_UID:mediacenter"
+create_file_from_content "${ROOT_DIR}/config/decypharr-config/torrents.json" "{}" "$INSTALL_UID:mediacenter"
 chmod 644 ${ROOT_DIR}/config/decypharr-config/*.json
 echo "✓ Decypharr configured with Real-Debrid token"
 
@@ -1735,7 +1726,7 @@ if [ "$INSTALL_HEALTHCHECK_FILES" = true ]; then
         create_file_from_content \
             "${ROOT_DIR}/data/realdebrid-zurg/torrents/.healthcheck_test.txt" \
             "HEALTHCHECK TEST FILE - DO NOT DELETE" \
-            "rclone:mediacenter"
+            "$INSTALL_UID:mediacenter"
 
         # Create symlink in media directory
         create_folder "${ROOT_DIR}/data/media/.healthcheck"
