@@ -8,7 +8,7 @@ services:
       - ../.env.local
     container_name: sonarr
     cpus: 1.0
-    user: ${SONARR_UID}:${MEDIACENTER_GID}
+    user: ${INSTALL_UID}:${MEDIACENTER_GID}
     networks:
       mediacenter:
         ipv4_address: 172.30.0.8
@@ -19,14 +19,14 @@ services:
       retries: 4
       start_period: 5s
     environment:
-    - PUID=${SONARR_UID}
+    - PUID=${INSTALL_UID}
     - PGID=${MEDIACENTER_GID}
     - UMASK=002
     - TZ=${TIMEZONE}
     - COMPlus_EnableDiagnostics=0
     tmpfs:
-    - /tmp:mode=770,noexec,size=50M,uid=${SONARR_UID},gid=${MEDIACENTER_GID}
-    - /logs:mode=770,size=100M,uid=${SONARR_UID},gid=${MEDIACENTER_GID}
+    - /tmp:mode=770,noexec,size=50M,uid=${INSTALL_UID},gid=${MEDIACENTER_GID}
+    - /logs:mode=770,size=100M,uid=${INSTALL_UID},gid=${MEDIACENTER_GID}
     volumes:
     - ${ROOT_DIR}/config/sonarr-config:/config
     - ${ROOT_DIR}/data:/data

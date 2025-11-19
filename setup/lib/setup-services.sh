@@ -160,23 +160,22 @@ sync_prowlarr_indexers() {
 configure_decypharr() {
     local config_dir=$1
     local rd_api_token=$2
+    local rd_token=$2
 
     log_section "Configuring Decypharr"
 
     # Create auth.json with Real-Debrid token
     local auth_file="${config_dir}/config/decypharr-config/auth.json"
 
-    sudo mkdir -p "$(dirname "$auth_file")"
-
+    mkdir -p "$(dirname "$auth_file")"
+    
+    # Create auth.json
     local auth_json="{
-    \"api_token\": \"$rd_api_token\",
-    \"username\": \"\",
-    \"password\": \"\"
+        \"real_debrid_api_key\": \"$rd_token\"
 }"
 
-    echo "$auth_json" | sudo tee "$auth_file" > /dev/null
-    sudo chown ${DECYPHARR_UID}:${MEDIACENTER_GID} "$auth_file"
-    sudo chmod 600 "$auth_file"
+    echo "$auth_json" | tee "$auth_file" > /dev/null
+    chmod 600 "$auth_file"
 
     log_success "Decypharr configuration completed"
 }

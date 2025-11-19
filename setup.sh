@@ -85,50 +85,14 @@ ask_password() {
     eval "$output_var='$user_password'"
 }
 
-# Check if UID is in conflict and return available UID
-# Usage: new_uid=$(check_uid_conflict "username" "desired_uid")
-check_uid_conflict() {
-    local username="$1"
-    local desired_uid="$2"
-
-    # If user already exists, return its current UID
-    if id "$username" >/dev/null 2>&1; then
-        id -u "$username"
-        return 0
+# Get Docker group GID
+get_docker_gid() {
+    if getent group docker >/dev/null 2>&1; then
+        getent group docker | cut -d: -f3
+    else
+        # Fallback if docker group doesn't exist (unlikely if docker is installed)
+        echo "0"
     fi
-
-    # If UID is available, return it
-    if ! getent passwd "$desired_uid" >/dev/null 2>&1; then
-        echo "$desired_uid"
-        return 0
-    fi
-
-    # UID is in conflict, find available one
-    local available_uid=$(find_available_uid "$desired_uid")
-    echo "$available_uid"
-}
-
-# Check if GID is in conflict and return available GID
-# Usage: new_gid=$(check_gid_conflict "groupname" "desired_gid")
-check_gid_conflict() {
-    local groupname="$1"
-    local desired_gid="$2"
-
-    # If group already exists, return its current GID
-    if getent group "$groupname" >/dev/null 2>&1; then
-        getent group "$groupname" | cut -d: -f3
-        return 0
-    fi
-
-    # If GID is available, return it
-    if ! getent group "$desired_gid" >/dev/null 2>&1; then
-        echo "$desired_gid"
-        return 0
-    fi
-
-    # GID is in conflict, find available one
-    local available_gid=$(find_available_gid "$desired_gid")
-    echo "$available_gid"
 }
 
 # Create .env.install configuration file
@@ -183,16 +147,7 @@ DOMAIN_NAME=$USER_DOMAIN
 MEDIACENTER_GID=$MEDIACENTER_GID
 
 # User IDs
-RCLONE_UID=${RCLONE_UID}
-SONARR_UID=${SONARR_UID}
-BAZARR_UID=${BAZARR_UID}
-RADARR_UID=${RADARR_UID}
-RECYCLARR_UID=${RECYCLARR_UID}
-PROWLARR_UID=${PROWLARR_UID}
-OVERSEERR_UID=${OVERSEERR_UID}
-PLEX_UID=${PLEX_UID}
-DECYPHARR_UID=${DECYPHARR_UID}
-AUTOSCAN_UID=${AUTOSCAN_UID}
+# All services run as INSTALL_UID
 
 # =============================================================================
 # CUSTOM PATHS - Default values
@@ -213,90 +168,83 @@ EOF
 
 # Create folder with permissions (atomic, reusable)
 # Usage: create_folder "/path/to/folder" "owner:group" "permissions"
+# Create folder with permissions (atomic, reusable)
+# Usage: create_folder "/path/to/folder" "owner:group" "permissions"
 create_folder() {
     local folder_path="$1"
-    local owner="${2:-$USER:$USER}"
+    # owner arg ignored
     local permissions="${3:-755}"
 
-    sudo mkdir -p "$folder_path"
-    sudo chown "$owner" "$folder_path"
-    sudo chmod "$permissions" "$folder_path"
+    mkdir -p "$folder_path"
+    chmod "$permissions" "$folder_path"
 }
 
+# Set permissions on path (atomic, reusable)
+# Usage: set_permissions "/path" "permissions" "owner:group"
 # Set permissions on path (atomic, reusable)
 # Usage: set_permissions "/path" "permissions" "owner:group"
 set_permissions() {
     local path="$1"
     local permissions="$2"
-    local owner="$3"
+    # owner arg ignored as we use current user
 
     if [ -n "$permissions" ]; then
-        sudo chmod -R "$permissions" "$path"
-    fi
-
-    if [ -n "$owner" ]; then
-        sudo chown -R "$owner" "$path"
+        chmod -R "$permissions" "$path"
     fi
 }
 
 # Copy file with permissions (atomic, reusable)
 # Usage: copy_file "source" "destination" "owner:group" "permissions"
+# Copy file with permissions (atomic, reusable)
+# Usage: copy_file "source" "destination" "owner:group" "permissions"
 copy_file() {
     local source="$1"
     local destination="$2"
-    local owner="${3:-}"
+    # owner arg ignored
     local permissions="${4:-}"
 
-    sudo cp "$source" "$destination"
-
-    if [ -n "$owner" ]; then
-        sudo chown "$owner" "$destination"
-    fi
+    cp "$source" "$destination"
 
     if [ -n "$permissions" ]; then
-        sudo chmod "$permissions" "$destination"
+        chmod "$permissions" "$destination"
     fi
 }
 
 # Download file from URL with permissions (atomic, reusable)
 # Usage: download_file "url" "destination" "owner:group" "permissions"
+# Download file from URL with permissions (atomic, reusable)
+# Usage: download_file "url" "destination" "owner:group" "permissions"
 download_file() {
     local url="$1"
     local destination="$2"
-    local owner="${3:-}"
+    # owner arg ignored
     local permissions="${4:-}"
 
     local temp_file="/tmp/download-$$-$(basename "$destination")"
 
     curl -sL "$url" -o "$temp_file"
-    sudo cp "$temp_file" "$destination"
+    cp "$temp_file" "$destination"
     rm -f "$temp_file"
 
-    if [ -n "$owner" ]; then
-        sudo chown "$owner" "$destination"
-    fi
-
     if [ -n "$permissions" ]; then
-        sudo chmod "$permissions" "$destination"
+        chmod "$permissions" "$destination"
     fi
 }
 
 # Create file from content with permissions (atomic, reusable)
 # Usage: create_file_from_content "destination" "content" "owner:group" "permissions"
+# Create file from content with permissions (atomic, reusable)
+# Usage: create_file_from_content "destination" "content" "owner:group" "permissions"
 create_file_from_content() {
     local destination="$1"
     local content="$2"
-    local owner="${3:-}"
+    # owner arg ignored
     local permissions="${4:-}"
 
-    echo "$content" | sudo tee "$destination" > /dev/null
-
-    if [ -n "$owner" ]; then
-        sudo chown "$owner" "$destination"
-    fi
+    echo "$content" | tee "$destination" > /dev/null
 
     if [ -n "$permissions" ]; then
-        sudo chmod "$permissions" "$destination"
+        chmod "$permissions" "$destination"
     fi
 }
 
@@ -631,23 +579,9 @@ show_installation_summary() {
         echo "Plex claim token:      (skipped - configure later)"
     fi
     echo ""
-    echo "USERS TO BE CREATED"
+    echo "GROUP TO BE USED"
     echo "-------------------"
-    echo "  - rclone (UID: ${RCLONE_UID})"
-    echo "  - sonarr (UID: ${SONARR_UID})"
-    echo "  - bazarr (UID: ${BAZARR_UID})"
-    echo "  - radarr (UID: ${RADARR_UID})"
-    echo "  - recyclarr (UID: ${RECYCLARR_UID})"
-    echo "  - prowlarr (UID: ${PROWLARR_UID})"
-    echo "  - overseerr (UID: ${OVERSEERR_UID})"
-    echo "  - plex (UID: ${PLEX_UID})"
-    echo "  - decypharr (UID: ${DECYPHARR_UID})"
-    echo "  - autoscan (UID: ${AUTOSCAN_UID})"
-    echo "  - pinchflat (UID: ${PINCHFLAT_UID})"
-    echo ""
-    echo "GROUP TO BE CREATED"
-    echo "-------------------"
-    echo "  - mediacenter (GID: ${MEDIACENTER_GID})"
+    echo "  - docker (GID: ${MEDIACENTER_GID})"
     echo ""
     echo "DIRECTORIES TO BE CREATED"
     echo "-------------------------"
@@ -698,124 +632,16 @@ check_existing_config() {
 # ========================================
 
 # Setup core users (atomic composition)
-# Creates all users required for core system functionality
-setup_core_users() {
-    log_section "Setting up Core System Users"
+# No longer creates users, just sets variables
+# Setup core users (atomic composition)
+# DEPRECATED: Logic moved to main script
+# setup_core_users() { ... }
 
-    # CORE users only: rclone, radarr, sonarr, prowlarr, decypharr, zilean, zurg
-    create_system_user "rclone" "$RCLONE_UID" "$MEDIACENTER_GID" "Rclone"
-    create_system_user "radarr" "$RADARR_UID" "$MEDIACENTER_GID" "Radarr"
-    create_system_user "sonarr" "$SONARR_UID" "$MEDIACENTER_GID" "Sonarr"
-    create_system_user "bazarr" "$BAZARR_UID" "$MEDIACENTER_GID" "Bazarr"
-    create_system_user "prowlarr" "$PROWLARR_UID" "$MEDIACENTER_GID" "Prowlarr"
-    create_system_user "decypharr" "$DECYPHARR_UID" "$MEDIACENTER_GID" "Decypharr"
-    create_system_user "zilean" "$ZILEAN_UID" "$MEDIACENTER_GID" "Zilean"
-    create_system_user "zurg" "$ZURG_UID" "$MEDIACENTER_GID" "Zurg"
+# setup_core_directories() { ... } # DEPRECATED: Logic moved to main script
 
-    log_success "Core users created successfully"
-}
+# setup_core_permissions() { ... } # DEPRECATED: Logic moved to main script
 
-# Setup core directories (atomic composition)
-# Creates all directories required for core system functionality
-setup_core_directories() {
-    log_section "Creating Core System Directories"
-
-    # Config directories for CORE services
-    create_folder "${ROOT_DIR}/config/radarr-config" "$INSTALL_UID:mediacenter" "775"
-    create_folder "${ROOT_DIR}/config/sonarr-config" "$INSTALL_UID:mediacenter" "775"
-    create_folder "${ROOT_DIR}/config/bazarr-config" "$INSTALL_UID:mediacenter" "775"
-    create_folder "${ROOT_DIR}/config/prowlarr-config" "$INSTALL_UID:mediacenter" "775"
-    create_folder "${ROOT_DIR}/config/decypharr-config" "$INSTALL_UID:mediacenter" "775"
-    create_folder "${ROOT_DIR}/config/zilean-config" "$INSTALL_UID:mediacenter" "775"
-
-    # Data directories for CORE services
-    create_folder "${ROOT_DIR}/data/symlinks/radarr" "$INSTALL_UID:mediacenter" "775"
-    create_folder "${ROOT_DIR}/data/symlinks/sonarr" "$INSTALL_UID:mediacenter" "775"
-    create_folder "${ROOT_DIR}/data/realdebrid-zurg" "$INSTALL_UID:mediacenter" "775"
-    create_folder "${ROOT_DIR}/data/media/movies" "$INSTALL_UID:mediacenter" "775"
-    create_folder "${ROOT_DIR}/data/media/tv" "$INSTALL_UID:mediacenter" "775"
-
-    log_success "Core directories created successfully"
-}
-
-# Setup core permissions (atomic composition)
-# Sets permissions for all core system directories
-setup_core_permissions() {
-    log_section "Setting Core System Permissions"
-
-    # Base permissions
-    set_permissions "${ROOT_DIR}/data/" "a=,a+rX,u+w,g+w" "$INSTALL_UID:mediacenter"
-    set_permissions "${ROOT_DIR}/config/" "a=,a+rX,u+w,g+w" "$INSTALL_UID:mediacenter"
-
-    # CORE service permissions
-    set_permissions "${ROOT_DIR}/config/radarr-config" "" "radarr:mediacenter"
-    set_permissions "${ROOT_DIR}/config/sonarr-config" "" "sonarr:mediacenter"
-    set_permissions "${ROOT_DIR}/config/bazarr-config" "" "bazarr:mediacenter"
-    set_permissions "${ROOT_DIR}/config/prowlarr-config" "" "prowlarr:mediacenter"
-    set_permissions "${ROOT_DIR}/config/decypharr-config" "" "decypharr:mediacenter"
-
-    log_success "Core permissions set successfully"
-}
-
-# Setup core files (atomic composition)
-# Copies/creates all configuration files required for core system
-setup_core_files() {
-    log_section "Setting up Core System Files"
-
-    # Copy rclone.conf (ALWAYS needed)
-    log_operation "COPY" "rclone.conf to ${ROOT_DIR}/"
-
-    # Verify source is a file
-    if [ ! -f "$SCRIPT_DIR/config/rclone.conf" ]; then
-        log_error "Source rclone.conf is not a file: $SCRIPT_DIR/config/rclone.conf"
-        exit 1
-    fi
-
-    # Remove destination if it's a directory
-    if [ -d "${ROOT_DIR}/rclone.conf" ]; then
-        log_warning "rclone.conf exists as directory, removing..."
-        sudo rm -rf "${ROOT_DIR}/rclone.conf"
-    fi
-
-    copy_file "$SCRIPT_DIR/config/rclone.conf" "${ROOT_DIR}/rclone.conf" "$INSTALL_UID:mediacenter"
-    echo "✓ rclone.conf copied to ${ROOT_DIR}/"
-
-    # Configure Zurg with Real-Debrid token
-    echo ""
-    echo "Configuring Zurg with Real-Debrid token..."
-
-    ZURG_CONFIG_CONTENT="token: ${REALDEBRID_TOKEN}
-zurg: v1
-concurrent_workers: 100
-check_for_changes_every_secs: 10
-retain_folder_name_extension: true
-retain_rd_torrent_name: true
-on_library_update: |
-  echo 'Done'
-network_buffer_size: 3145728
-repair_from_mount_logs: true
-auto_repair_enabled: true"
-
-    create_file_from_content "${ROOT_DIR}/data/realdebrid-zurg/config.yml" "$ZURG_CONFIG_CONTENT" "$INSTALL_UID:mediacenter"
-    echo "✓ Zurg configuration created"
-
-    # Configure Decypharr with Real-Debrid token
-    echo ""
-    echo "Configuring Decypharr with Real-Debrid token..."
-
-    DECYPHARR_CONFIG_CONTENT="[general]
-realdebrid_api_key = \"${REALDEBRID_TOKEN}\"
-download_path = \"/data/torrents\"
-enable_downloads = true
-enable_repair_worker = true
-[logging]
-level = \"info\""
-
-    create_file_from_content "${ROOT_DIR}/config/decypharr-config/config.toml" "$DECYPHARR_CONFIG_CONTENT" "$INSTALL_UID:mediacenter"
-    echo "✓ Decypharr configuration created"
-
-    log_success "Core files configured successfully"
-}
+# setup_core_files() { ... } # DEPRECATED: Logic moved to main script
 
 # Start core services (atomic composition)
 # Starts all Docker containers required for core system
@@ -1009,7 +835,7 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 # Load setup libraries
 LIB_DIR="${SCRIPT_DIR}/setup/lib"
 source "${LIB_DIR}/setup-common.sh"
-source "${LIB_DIR}/setup-users.sh"
+# source "${LIB_DIR}/setup-users.sh" # Removed as part of simplification
 source "${LIB_DIR}/setup-api.sh"
 source "${LIB_DIR}/setup-services.sh"
 
@@ -1138,45 +964,13 @@ If disabled, services will be accessible via their direct ports." \
             "USER_DOMAIN"
     fi
 
-    # Check and auto-fix UID/GID conflicts
-    echo "Checking for UID/GID conflicts..."
-    echo ""
-
-    # Check GID for mediacenter group
-    ORIGINAL_GID=$MEDIACENTER_GID
-    MEDIACENTER_GID=$(check_gid_conflict "mediacenter" "$MEDIACENTER_GID")
-    if [ "$MEDIACENTER_GID" != "$ORIGINAL_GID" ]; then
-        echo "  → Assigned GID $MEDIACENTER_GID for mediacenter group (was $ORIGINAL_GID, in use)"
-    fi
-
-    # Check UIDs for all users
-    declare -A USERS=(
-        ["RCLONE_UID"]="rclone"
-        ["SONARR_UID"]="sonarr"
-        ["BAZARR_UID"]="bazarr"
-        ["RADARR_UID"]="radarr"
-        ["RECYCLARR_UID"]="recyclarr"
-        ["PROWLARR_UID"]="prowlarr"
-        ["OVERSEERR_UID"]="overseerr"
-        ["PLEX_UID"]="plex"
-        ["DECYPHARR_UID"]="decypharr"
-        ["AUTOSCAN_UID"]="autoscan"
-    )
-
-    for var_name in "${!USERS[@]}"; do
-        username="${USERS[$var_name]}"
-        uid_value="${!var_name}"
-
-        new_uid=$(check_uid_conflict "$username" "$uid_value")
-
-        if [ "$new_uid" != "$uid_value" ]; then
-            echo "  → Assigned UID $new_uid for $username (was $uid_value, in use)"
-            eval "$var_name=$new_uid"
-        fi
-    done
-
-    echo ""
-    echo "No UID/GID conflicts detected. Using defaults."
+    # Use current user UID and docker GID
+    INSTALL_UID=$(id -u)
+    MEDIACENTER_GID=$(get_docker_gid)
+    
+    echo "Using system configuration:"
+    echo "  - UID: $INSTALL_UID (current user)"
+    echo "  - GID: $MEDIACENTER_GID (docker group)"
     echo ""
 
     # Create .env.install with all configuration
@@ -1221,16 +1015,18 @@ if [ ! -d "${ROOT_DIR}" ]; then
     sudo chown $USER:$USER "${ROOT_DIR}"
 fi
 
-# Create users and groups using library function
-setup_mediacenter_users $INSTALL_UID $MEDIACENTER_GID
+# Define INSTALL_UID and MEDIACENTER_GID
+INSTALL_UID=$(id -u)
+MEDIACENTER_GID=$(get_docker_gid)
 
-# Set base directory permissions
-sudo chown -R $INSTALL_UID:mediacenter "${ROOT_DIR}"
-sudo chmod 775 "${ROOT_DIR}"
+log_info "Using UID: $INSTALL_UID and GID: $MEDIACENTER_GID"
+
+# Set base directory permissions (using current user)
+chmod 775 "${ROOT_DIR}"
 log_success "Base directory permissions set"
 
-# Add current user to mediacenter group
-add_user_to_group $USER mediacenter
+# Add current user to docker group if not already (optional, usually already is)
+# add_user_to_group $USER docker
 
 # Create directories
 echo ""
@@ -1282,8 +1078,7 @@ if [ "$ROOT_DIR" != "$SCRIPT_DIR" ]; then
     echo ""
     echo "Copying docker configuration to installation directory..."
     log_operation "COPY" "docker directory to ${ROOT_DIR}/docker"
-    sudo cp -r "$SCRIPT_DIR/docker" "${ROOT_DIR}/"
-    sudo chown -R $INSTALL_UID:mediacenter "${ROOT_DIR}/docker"
+    cp -r "$SCRIPT_DIR/docker" "${ROOT_DIR}/"
     echo "✓ Docker configuration copied to ${ROOT_DIR}/docker"
 
     # Copy recyclarr configuration
@@ -1306,7 +1101,7 @@ fi
 # Remove destination if it's a directory
 if [ -d "${ROOT_DIR}/rclone.conf" ]; then
     log_warning "Destination rclone.conf is a directory, removing it"
-    sudo rm -rf "${ROOT_DIR}/rclone.conf"
+    rm -rf "${ROOT_DIR}/rclone.conf"
 fi
 
 copy_file "$SCRIPT_DIR/config/rclone.conf" "${ROOT_DIR}/rclone.conf" "rclone:mediacenter"
@@ -1459,7 +1254,7 @@ create_file_from_content "${ROOT_DIR}/config/decypharr-config/config.json" "$DEC
 # Create empty auth.json and torrents.json
 create_file_from_content "${ROOT_DIR}/config/decypharr-config/auth.json" "{}" "decypharr:mediacenter"
 create_file_from_content "${ROOT_DIR}/config/decypharr-config/torrents.json" "{}" "decypharr:mediacenter"
-sudo chmod 644 ${ROOT_DIR}/config/decypharr-config/*.json
+chmod 644 ${ROOT_DIR}/config/decypharr-config/*.json
 echo "✓ Decypharr configured with Real-Debrid token"
 
 # Mount healthcheck auto-repair system
@@ -1766,7 +1561,7 @@ if [[ $autoconfig_choice =~ ^[Yy]$ ]]; then
             "configContract": "CardigannSettings",
             "tags": []
         }'
-        api_post_request "http://localhost:${PROWLARR_PORT}/api/v1/indexer" "$PROWLARR_API_KEY" "$TORRENTIO_JSON"
+        api_post_request "http://localhost:${PROWLARR_PORT}/api/v1/indexer" "$PRORENTIO_JSON"
         echo "  ✓ Indexer added: Torrentio"
 
         # Add Zilean indexer (disabled initially) using atomic function
@@ -1936,12 +1731,12 @@ if [ "$INSTALL_HEALTHCHECK_FILES" = true ]; then
 
         # Create symlink in media directory
         create_folder "${ROOT_DIR}/data/media/.healthcheck"
-        sudo ln -sf ${ROOT_DIR}/data/realdebrid-zurg/torrents/.healthcheck_test.txt ${ROOT_DIR}/data/media/.healthcheck/test_symlink.txt
+        ln -sf ${ROOT_DIR}/data/realdebrid-zurg/torrents/.healthcheck_test.txt ${ROOT_DIR}/data/media/.healthcheck/test_symlink.txt
 
         echo "✓ Healthcheck test file created"
     else
         echo "⚠ Warning: rclone mount not ready yet. Create test file manually later:"
-        echo "  echo 'HEALTHCHECK TEST FILE' | sudo tee ${ROOT_DIR}/data/realdebrid-zurg/torrents/.healthcheck_test.txt"
+        echo "  echo 'HEALTHCHECK TEST FILE' | tee ${ROOT_DIR}/data/realdebrid-zurg/torrents/.healthcheck_test.txt"
     fi
 fi
 

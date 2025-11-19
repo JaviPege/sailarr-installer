@@ -17,7 +17,7 @@ services:
       retries: 3
       start_period: 60s
     environment:
-    - PUID=${PLEXTRAKTSYNC_UID}
+    - PUID=${INSTALL_UID}
     - PGID=${MEDIACENTER_GID}
     - TZ=${TIMEZONE}
     - UMASK=002

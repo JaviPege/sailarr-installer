@@ -20,13 +20,13 @@ services:
       retries: 4
       start_period: 60s
     environment:
-    - PUID=${AUTOSCAN_UID}
+    - PUID=${INSTALL_UID}
     - PGID=${MEDIACENTER_GID}
     - AUTOSCAN_VERBOSITY=0
     - UMASK=002
     tmpfs:
-    - /tmp:mode=770,noexec,size=30M,uid=${AUTOSCAN_UID},gid=${MEDIACENTER_GID}
-    - /config/logs:mode=770,size=30M,uid=${AUTOSCAN_UID},gid=${MEDIACENTER_GID}
+    - /tmp:mode=770,noexec,size=30M,uid=${INSTALL_UID},gid=${MEDIACENTER_GID}
+    - /config/logs:mode=770,size=30M,uid=${INSTALL_UID},gid=${MEDIACENTER_GID}
     volumes:
     - ${ROOT_DIR}/config/autoscan-config:/config
     - ${ROOT_DIR}/data:/data:ro

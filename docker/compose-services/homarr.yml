@@ -18,7 +18,7 @@ services:
       retries: 3
       start_period: 30s
     environment:
-    - PUID=${HOMARR_UID}
+    - PUID=${INSTALL_UID}
     - PGID=${MEDIACENTER_GID}
     - TZ=${TIMEZONE}
     - UMASK=002
@@ -26,8 +26,8 @@ services:
     - DEFAULT_COLOR_SCHEME=dark
     - SECRET_ENCRYPTION_KEY=15c253548d1f209f6f110e063ae7d7a93abdaf79b2581e7b6adfcc5231c976c0
     tmpfs:
-    - /tmp:mode=770,noexec,size=30M,uid=${HOMARR_UID},gid=${MEDIACENTER_GID}
-    - /appdata/logs:mode=770,size=30M,uid=${HOMARR_UID},gid=${MEDIACENTER_GID}
+    - /tmp:mode=770,noexec,size=30M,uid=${INSTALL_UID},gid=${MEDIACENTER_GID}
+    - /appdata/logs:mode=770,size=30M,uid=${INSTALL_UID},gid=${MEDIACENTER_GID}
     ports:
     - ${HOMARR_PORT}:${HOMARR_CONTAINER_PORT}
     restart: on-failure:5

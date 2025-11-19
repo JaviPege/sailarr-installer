@@ -9,7 +9,7 @@ services:
     container_name: dashdot
     cpus: 0.5
     privileged: true
-    user: ${DASHDOT_UID}:${MEDIACENTER_GID}
+    user: ${INSTALL_UID}:${MEDIACENTER_GID}
     restart: on-failure:5
     networks:
       mediacenter:

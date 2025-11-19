@@ -10,7 +10,7 @@ services:
     network_mode: host
     restart: unless-stopped
     environment:
-      - PUID=${PLEX_UID}
+      - PUID=${INSTALL_UID}
       - PGID=${MEDIACENTER_GID}
       - TZ=${TIMEZONE}
       - VERSION=docker

@@ -11,7 +11,7 @@ services:
       mediacenter:
         ipv4_address: 172.30.0.19
     environment:
-      - PUID=${TAUTULLI_UID}
+      - PUID=${INSTALL_UID}
       - PGID=${MEDIACENTER_GID}
       - TZ=${TIMEZONE}
       - UMASK=002

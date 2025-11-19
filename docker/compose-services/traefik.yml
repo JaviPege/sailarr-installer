@@ -9,7 +9,7 @@ services:
       - ../.env.defaults
       - ../.env.local
     container_name: traefik
-    user: "${TRAEFIK_UID}:${MEDIACENTER_GID}"
+    user: "${INSTALL_UID}:${MEDIACENTER_GID}"
     restart: unless-stopped
     networks:
       mediacenter:

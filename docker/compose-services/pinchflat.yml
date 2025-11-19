@@ -8,7 +8,7 @@ services:
       - ../.env.local
     container_name: pinchflat
     cpus: 0.5
-    user: ${PINCHFLAT_UID}:${MEDIACENTER_GID}
+    user: ${INSTALL_UID}:${MEDIACENTER_GID}
     networks:
       mediacenter:
         ipv4_address: 172.30.0.16
@@ -20,12 +20,12 @@ services:
       start_period: 90s
     environment:
     - TZ=${TIMEZONE}
-    - PUID=${PINCHFLAT_UID}
+    - PUID=${INSTALL_UID}
     - PGID=${MEDIACENTER_GID}
     - UMASK=002
     tmpfs:
-    - /tmp:mode=770,noexec,size=100M,uid=${PINCHFLAT_UID},gid=${MEDIACENTER_GID}
-    - /config/logs:mode=770,size=50M,uid=${PINCHFLAT_UID},gid=${MEDIACENTER_GID}
+    - /tmp:mode=770,noexec,size=100M,uid=${INSTALL_UID},gid=${MEDIACENTER_GID}
+    - /config/logs:mode=770,size=50M,uid=${INSTALL_UID},gid=${MEDIACENTER_GID}
     ports:
     - ${PINCHFLAT_PORT}:8945
     restart: on-failure:5
