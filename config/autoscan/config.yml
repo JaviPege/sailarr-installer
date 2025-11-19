@@ -34,5 +34,5 @@ triggers:
 
 targets:
   plex:
-    - url: http://URL_TO_PLEX
+    - url: http://localhost:32400
       token: PLEX_TOKEN

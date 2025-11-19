@@ -1114,6 +1114,14 @@ fi
 
 log_success "rclone.conf copied successfully to ${ROOT_DIR}/"
 
+# Copy autoscan config
+if [ -f "$SCRIPT_DIR/config/autoscan/config.yml" ]; then
+    echo ""
+    log_operation "COPY" "autoscan config to ${ROOT_DIR}/config/autoscan-config/"
+    copy_file "$SCRIPT_DIR/config/autoscan/config.yml" "${ROOT_DIR}/config/autoscan-config/config.yml" "autoscan:mediacenter" "644"
+    echo "✓ Autoscan configuration copied"
+fi
+
 # Download custom indexer definitions for Prowlarr
 echo ""
 echo "Downloading custom indexer definitions..."
