@@ -1,30 +1,30 @@
 {
-  "service": "overseerr",
-  "description": "Overseerr - Request Management",
-  "compose_file": "overseerr.yml",
+  "service": "seerr",
+  "description": "Seerr - Request Management",
+  "compose_file": "seerr.yml",
   "setup": {
     "steps": [
       {
         "action": "wait_for_service",
-        "description": "Waiting for Overseerr to be ready",
+        "description": "Waiting for Seerr to be ready",
         "params": {
-          "service": "overseerr",
+          "service": "seerr",
           "port": 5055,
           "timeout": 120
         }
       },
       {
         "action": "log_info",
-        "description": "Overseerr access info",
+        "description": "Seerr access info",
         "params": {
-          "message": "Overseerr: http://${SERVER_IP}:5055"
+          "message": "Seerr: http://${SERVER_IP}:5055"
         }
       },
       {
         "action": "log_info",
         "description": "Display API keys",
         "params": {
-          "message": "API Keys for Overseerr setup:\n   • Radarr: ${RADARR_API_KEY}\n   • Sonarr: ${SONARR_API_KEY}"
+          "message": "API Keys for Seerr setup:\n   • Radarr: ${RADARR_API_KEY}\n   • Sonarr: ${SONARR_API_KEY}"
         }
       },
       {

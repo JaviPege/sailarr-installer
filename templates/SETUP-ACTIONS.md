@@ -273,7 +273,7 @@ Display a warning message.
   "action": "log_warning",
   "description": "Warn about manual configuration",
   "params": {
-    "message": "Manual configuration required for Overseerr"
+    "message": "Manual configuration required for Seerr"
   }
 }
 ```

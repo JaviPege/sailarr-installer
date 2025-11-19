@@ -1,7 +1,7 @@
 #!/bin/bash
 # Get Config Directories - Extracts list of services that need config directories
-# Usage: ./get-config-dirs.sh core mediaplayers/plex extras/overseerr
-# Output: radarr sonarr prowlarr plex overseerr decypharr autoscan zilean
+# Usage: ./get-config-dirs.sh core mediaplayers/plex extras/seerr
+# Output: radarr sonarr prowlarr plex seerr decypharr autoscan zilean
 
 set -e
 
@@ -16,7 +16,7 @@ CONFIG_REQUIRING_SERVICES=(
     "sonarr"
     "prowlarr"
     "plex"
-    "overseerr"
+    "seerr"
     "decypharr"
     "autoscan"
     "zilean"

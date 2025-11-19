@@ -1,7 +1,7 @@
 #!/bin/bash
 # Get Services List - Extracts flat list of services from selected templates
-# Usage: ./get-services-list.sh core mediaplayers/plex extras/overseerr
-# Output: networks volumes zurg rclone radarr sonarr prowlarr ... plex overseerr
+# Usage: ./get-services-list.sh core mediaplayers/plex extras/seerr
+# Output: networks volumes zurg rclone radarr sonarr prowlarr ... plex seerr
 
 set -e
 

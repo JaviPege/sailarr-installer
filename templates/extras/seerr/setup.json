@@ -1,0 +1,36 @@
+{
+  "name": "extras/seerr",
+  "description": "Seerr setup configuration",
+  "steps": [
+    {
+      "action": "wait_for_service",
+      "description": "Wait for Seerr to be ready",
+      "params": {
+        "service": "seerr",
+        "port": 5055,
+        "timeout": 120
+      }
+    },
+    {
+      "action": "log_info",
+      "description": "Display Seerr setup instructions",
+      "params": {
+        "message": "Seerr is ready at http://${SERVER_IP}:5055"
+      }
+    },
+    {
+      "action": "log_info",
+      "description": "Display API keys for Seerr configuration",
+      "params": {
+        "message": "API Keys for Seerr setup:\n   • Radarr API Key: ${RADARR_API_KEY}\n   • Sonarr API Key: ${SONARR_API_KEY}"
+      }
+    },
+    {
+      "action": "log_info",
+      "description": "Display post-install guide reference",
+      "params": {
+        "message": "Follow the detailed setup guide: ${ROOT_DIR}/docker/POST-INSTALL.md"
+      }
+    }
+  ]
+}

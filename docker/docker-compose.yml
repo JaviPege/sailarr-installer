@@ -9,43 +9,43 @@ include:
   # Core Infrastructure
   - compose-services/networks.yml
   - compose-services/volumes.yml
-  
+
   # Security & Routing
   - compose-services/traefik.yml
   - compose-services/traefik-socket-proxy.yml
-  
+
   # Media Server
   - compose-services/plex.yml
-  
+
   # Request Management
-  - compose-services/overseerr.yml
-  
+  - compose-services/seerr.yml
+
   # Media Management
   - compose-services/radarr.yml
   - compose-services/sonarr.yml
   - compose-services/prowlarr.yml
-  
+
   # Download & Streaming
   # - compose-services/rdtclient.yml  # Replaced by Decypharr
   - compose-services/decypharr.yml
   - compose-services/zurg.yml
   - compose-services/rclone.yml
-  
+
   # Indexers
   - compose-services/zilean.yml
   - compose-services/zilean-postgres.yml
-  
+
   # Utilities
   # - compose-services/recyclarr.yml  # Run manually when needed
   - compose-services/autoscan.yml
   - compose-services/watchtower.yml
-  
+
   # Additional Services
   - compose-services/pinchflat.yml
   - compose-services/plextraktsync.yml
   - compose-services/tautulli.yml
   - compose-services/bazarr.yml
-  
+
   # Dashboard & Monitoring
   - compose-services/homarr.yml
   - compose-services/dashdot.yml

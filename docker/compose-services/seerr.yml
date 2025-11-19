@@ -1,12 +1,12 @@
-# Overseerr - Request Management
+# Seerr - Request Management
 
 services:
-  overseerr:
-    image: ${OVERSEERR_IMAGE}:${OVERSEERR_TAG}
+  seerr:
+    image: ${SEERR_IMAGE}:${SEERR_TAG}
     env_file:
       - ../.env.defaults
       - ../.env.local
-    container_name: overseerr
+    container_name: seerr
     cpus: 0.5
     user: ${INSTALL_UID}:${MEDIACENTER_GID}
     networks:
@@ -27,9 +27,9 @@ services:
     - /tmp:mode=770,noexec,size=30M,uid=${INSTALL_UID},gid=${MEDIACENTER_GID}
     - /app/config/logs:mode=770,size=50M,uid=${INSTALL_UID},gid=${MEDIACENTER_GID}
     volumes:
-    - ${ROOT_DIR}/config/overseerr-config:/app/config
+    - ${ROOT_DIR}/config/seerr-config:/app/config
     ports:
-    - ${OVERSEERR_PORT}:5055
+    - ${SEERR_PORT}:5055
     restart: on-failure:5
     logging:
       driver: local
@@ -38,9 +38,9 @@ services:
         max-size: 10m
     labels:
     - traefik.enable=true
-    - traefik.http.routers.overseerr.rule=Host(`${OVERSEERR_TRAEFIK_NAME}.${DOMAIN_NAME}`)
-    - traefik.http.routers.overseerr.entrypoints=web
-    - traefik.http.services.overseerr.loadbalancer.server.port=5055
+    - traefik.http.routers.seerr.rule=Host(`${SEERR_TRAEFIK_NAME}.${DOMAIN_NAME}`)
+    - traefik.http.routers.seerr.entrypoints=web
+    - traefik.http.services.seerr.loadbalancer.server.port=5055
     depends_on:
       sonarr:
         condition: service_healthy

@@ -11,7 +11,7 @@ templates/
 │   ├── plex/             # Plex Media Server
 │   └── jellyfin/         # Jellyfin Media Server (alternative to Plex)
 └── extras/               # Optional services
-    ├── overseerr/        # Request management (requires Plex)
+    ├── seerr/        # Request management (requires Plex)
     ├── tautulli/         # Plex analytics
     ├── homarr/           # Dashboard
     ├── dashdot/          # System monitoring
@@ -50,7 +50,7 @@ Each template directory contains:
 
 ### Optional Services (extras/)
 
-**overseerr**
+**seerr**
 - Request management system
 - Depends on: core, plex
 
@@ -79,15 +79,15 @@ templates: core
 services: 13 containers
 ```
 
-### Plex + Overseerr
+### Plex + Seerr
 ```
-templates: core + mediaplayers/plex + extras/overseerr
+templates: core + mediaplayers/plex + extras/seerr
 services: 15 containers
 ```
 
 ### Full Stack
 ```
-templates: core + mediaplayers/plex + extras/overseerr + extras/tautulli + extras/homarr + extras/traefik
+templates: core + mediaplayers/plex + extras/seerr + extras/tautulli + extras/homarr + extras/traefik
 services: 20+ containers
 ```
 

@@ -207,7 +207,7 @@ EOF
             plex.yml|jellyfin.yml|emby.yml)
                 category="Media Servers"
                 ;;
-            overseerr.yml|jellyseerr.yml)
+            seerr.yml|jellyseerr.yml)
                 category="Request Management"
                 ;;
             autoscan.yml)
@@ -252,13 +252,13 @@ main() {
         echo "  - core (required)"
         echo "  - mediaplayers/plex"
         echo "  - mediaplayers/jellyfin"
-        echo "  - extras/overseerr"
+        echo "  - extras/seerr"
         echo "  - extras/tautulli"
         echo "  - extras/homarr"
         echo "  - extras/traefik"
         echo ""
         echo "Example:"
-        echo "  $0 core mediaplayers/plex extras/overseerr"
+        echo "  $0 core mediaplayers/plex extras/seerr"
         exit 1
     fi
 
